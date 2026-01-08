@@ -1,0 +1,32 @@
+description = "Review code changes against all rules"
+
+prompt = """
+# CODE REVIEW
+
+Review the code below using the appropriate reviewer agent.
+
+## Agents
+
+### For C#/.NET code:
+@../agents/roles/reviewer.dotnet.agent.md
+
+### For TypeScript/JavaScript code:
+@../agents/roles/reviewer.typescript.agent.md
+
+---
+
+## Code to Review
+
+!{git diff --staged}
+
+{{args}}
+
+---
+
+## Instructions
+
+1. Detect the code type (C#, TypeScript, or both)
+2. Use the appropriate reviewer agent above
+3. Check against ALL rules loaded by that agent
+4. Output violations found, or PASS if none
+"""

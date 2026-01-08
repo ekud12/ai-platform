@@ -1,175 +1,65 @@
-description = "Run Wiggum autonomous loop with HARD ENFORCEMENT - Plan, Code, Review (BLOCK on failure)"
+description = "Plan → Code → Review → Fix loop until approved"
 
 prompt = """
-# WIGGUM AUTONOMOUS LOOP - HARD ENFORCEMENT MODE
+# WIGGUM - IMPLEMENT LOOP
 
-You are the Wiggum Orchestrator. Execute the full autonomous development loop with HARD RULE ENFORCEMENT.
+You will implement the request below using a strict loop until the code passes review.
 
-## Loaded Agents & Rules
+## Agents
 
-### .NET Coder Agent
+### Planner
+@../agents/roles/planner.agent.md
+
+### .NET Coder
 @../agents/roles/coder.dotnet.agent.md
 
-### .NET Reviewer Agent (with all compiled rules)
+### .NET Reviewer
 @../agents/roles/reviewer.dotnet.agent.md
 
-### TypeScript Coder Agent
+### TypeScript Coder
 @../agents/roles/coder.typescript.agent.md
 
-### TypeScript Reviewer Agent (with all compiled rules)
+### TypeScript Reviewer
 @../agents/roles/reviewer.typescript.agent.md
 
-## OUTPUT RULES (CRITICAL)
+---
 
-**BE CONCISE.** Only output:
-1. Phase headers (one line)
-2. File writes (tool output only)
-3. FAILURES and BLOCKS (with fix)
-4. Final verdict JSON
+## REQUEST
 
-**DO NOT output:**
-- Passing rule checks (silence = pass)
-- Explanations of what you're doing
-- Rule references or rationale
-- Code snippets in review (just cite line numbers)
-- "I will now..." or "Let me..." narration
+{{args}}
 
-**Format (with timing):**
+---
+
+## EXECUTION LOOP
+
+### 1. PLAN
+Use the **Planner Agent** to analyze the request and create a plan.
+
+### 2. CODE
+Use the appropriate **Coder Agent** (.NET or TypeScript) to write the files.
+Follow ALL rules loaded by that agent.
+
+### 3. REVIEW
+Use the appropriate **Reviewer Agent** to check against ALL compiled rules.
+Output violations:
 ```
-## PHASE 1: PLAN [planner] (450ms)
-{plan JSON}
-
-## PHASE 2: EXECUTE [coder-dotnet] (2100ms)
-[tool writes files]
-
-## PHASE 3: REVIEW [reviewer-dotnet] (1800ms)
-BLOCKED: CS-LANG-014 (line 5) - Missing XML docs
-[fix]
-PASS (N rules checked)
-
-## PHASE 4: MEMORY [after-agent.js]
-[runs generate-map.js, updates snapshot.json]
-
-## PHASE 5: COMPLETE [orchestrator]
-{"success":true,"files":[...],"rules_checked":N,"timing_ms":{"total":4470}}
+FAIL: <rule-id> (line N) - <issue>
 ```
 
----
+### 4. DECISION
+- If ANY critical/major violations → go to step 5
+- If PASS → go to step 6
 
-## Specification to Implement
+### 5. FIX
+Fix the violations. Go back to step 3 (REVIEW).
+Max 5 iterations.
 
-**Input:** {{args}}
-
-**Instructions:**
-- If the input above is a file path (ends in `.md`, `.spec`, `.txt`), read that file for the spec
-- Otherwise, treat the input text directly as the specification
-- If no input provided, ask the user what to build
-
----
-
-## CRITICAL: HARD ENFORCEMENT RULES
-
-This loop uses STRUCTURED RULE CHECKING from compiled JSON rules.
-The review phase will BLOCK if ANY critical or major rule fails.
-
-### Enforcement Levels:
-- **CRITICAL**: Immediate block, security vulnerability or major defect
-- **MAJOR**: Block, significant code quality issue
-- **MINOR**: Warning only, should fix but won't block
-- **INFO**: Suggestion, nice to have
-
-If BLOCKED, you MUST:
-1. Analyze the blocking failures
-2. Return to PHASE 2 and fix the code
-3. Re-run PHASE 3 review
-4. Repeat until PASS
-
----
-
-## PHASE 1: PLAN [planner]
-
-Create an execution plan. Break the specification into atomic steps.
-
-Output format:
-```json
-{
-  "phase": "PLANNING",
-  "plan": [
-    { "step": 1, "role": "coder-dotnet|coder-typescript", "instruction": "..." }
-  ]
-}
-```
-
----
-
-## PHASE 2: EXECUTE [coder-dotnet|coder-typescript]
-
-For each step: write files. No narration.
-Follow rules in @../rules/dotnet/*.rules.md or @../rules/typescript/*.rules.md
-
----
-
-## PHASE 3: REVIEW [reviewer-dotnet|reviewer-typescript]
-
-**Use the reviewer agent loaded above.** All compiled JSON rules are already in context.
-
-Based on the code type from PHASE 2:
-- For C#/.NET code: Use the .NET Reviewer Agent (250+ rules)
-- For TypeScript code: Use the TypeScript Reviewer Agent (120+ rules)
-
-Check EVERY rule in the loaded JSON files against the generated code.
-
-**Output format (failures only):**
-```
-BLOCKED: <rule-id> (line N) - <brief issue>
-```
-
-If all pass: `PASS (N rules)` where N is the actual count checked.
-
-On BLOCK: fix immediately, re-check, repeat until PASS or 3 failures.
-
----
-
-## PHASE 4: MEMORY [after-agent.js]
-
-**REQUIRED:** Run the after-agent hook to update project memory:
-
-```bash
-node .gemini/hooks/after-agent.js
-```
-
-This updates:
-- `.gemmem/snapshot.json` - Architecture map (modules, layers, dependencies)
-- `.gemmem/history.json` - Lessons learned (if any LESSON:/TIL: patterns in output)
-- `.gemini/logs/gemmem-*.log` - Milestone log
-
----
-
-## PHASE 5: COMPLETE [orchestrator]
-
-Output ACTUAL counts from your execution:
+### 6. FINISH
 ```json
 {
   "success": true,
-  "iterations": <actual_iteration_count>,
-  "files": [<actual_files_created>],
-  "rules_checked": <actual_rules_count_from_review>,
-  "timing_ms": {
-    "plan": <actual>,
-    "execute": <actual>,
-    "review": <actual>,
-    "memory": <actual>,
-    "total": <actual>
-  }
-}
-```
-
-If FAILED after 3 attempts:
-```json
-{
-  "success": false,
-  "stuck_on": ["CS-LANG-014", "CS-SEC-001"],
-  "timing_ms": { "total": 8500 }
+  "files": ["..."],
+  "iterations": N
 }
 ```
 
@@ -177,5 +67,5 @@ If FAILED after 3 attempts:
 
 ## BEGIN
 
-Execute. Be concise.
+Start with PLAN.
 """
