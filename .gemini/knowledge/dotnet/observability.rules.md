@@ -27,13 +27,13 @@ All rules use the CS-OBS prefix.
 ## CS-OBS-001 — Structured Logging
 
 **Rule**
-All logging must use structured logging with named parameters.
+All logging must use structured logging with named parameters. 
+
+**Hot Path Exception**
+Standard `ILogger` calls are **FORBIDDEN** in code marked as a "Hot Path" (e.g., inside high-frequency loops). Must use `LoggerMessage` source generators or `DiagnosticSource` to achieve zero-allocation telemetry.
 
 **Rationale**
-Structured logs enable searching, filtering, and aggregation. They are machine-parseable and human-readable.
-
-**Enforcement**
-Code review must verify structured format. String interpolation in log messages must be rejected. Log templates must have named placeholders.
+Structured logs enable searching and filtering, but traditional logging creates heap allocations that degrade performance on hot paths.
 
 ---
 

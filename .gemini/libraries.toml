@@ -1,0 +1,19 @@
+# AI Corporate Agent OS - Library Registry
+# Managed according to CONST-005
+
+[dotnet]
+allowed_packages = [
+    "Microsoft.Extensions.Caching.Memory",
+    "Microsoft.Extensions.DependencyInjection.Abstractions",
+    "Microsoft.Extensions.Logging.Abstractions",
+    "Microsoft.Extensions.Options.ConfigurationExtensions"
+]
+
+[typescript]
+allowed_packages = [
+    "zod",
+    "lucide-react"
+]
+
+[governance]
+policy = "If a library is not on this list, the agent must ask for human authorization before use."

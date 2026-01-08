@@ -403,61 +403,29 @@ Parallel structure makes finding and maintaining tests intuitive.
 
 ---
 
-## CS-FILE-014 — Project File Configuration
+## CS-FILE-014-A — Project Artifact Integrity
 
 **Severity: Critical**
 
 **Rule**
-All `.csproj` files MUST be explicit with full configuration, not minimal/implicit.
+All projects MUST be buildable as standalone artifacts. Core build settings (Nullable, LangVersion) MUST be discoverable within the project context.
 
-**Bad Pattern**
-```xml
-<Project Sdk="Microsoft.NET.Sdk.Web">
-  <PropertyGroup>
-    <TargetFramework>net10.0</TargetFramework>
-  </PropertyGroup>
-</Project>
-```
+---
+
+## CS-FILE-014-B — Template Inheritance
+
+**Severity: Major**
+
+**Rule**
+Projects MAY use a minimal `.csproj` IF they explicitly reference a `Directory.Build.props` at the solution or project root that contains the mandatory configurations. 
 
 **Good Pattern**
 ```xml
-<Project Sdk="Microsoft.NET.Sdk.Web">
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Minimal config because Directory.Build.props handles the rest -->
   <PropertyGroup>
-    <!-- Build Configuration -->
-    <TargetFramework>net10.0</TargetFramework>
-    <Nullable>enable</Nullable>
-    <ImplicitUsings>enable</ImplicitUsings>
-    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
-    <WarningsAsErrors />
-
-    <!-- Assembly Information -->
-    <RootNamespace>MyCompany.OrderSystem.Api</RootNamespace>
-    <AssemblyName>MyCompany.OrderSystem.Api</AssemblyName>
-
-    <!-- Documentation -->
-    <GenerateDocumentationFile>true</GenerateDocumentationFile>
-    <NoWarn>$(NoWarn);1591</NoWarn>
-
-    <!-- Analyzers -->
-    <EnableNETAnalyzers>true</EnableNETAnalyzers>
-    <AnalysisLevel>latest</AnalysisLevel>
-    <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
-
-    <!-- Package Metadata -->
-    <Authors>MyCompany</Authors>
-    <Company>MyCompany</Company>
-    <Description>Order System API</Description>
+    <RootNamespace>MyCompany.Project</RootNamespace>
   </PropertyGroup>
-
-  <!-- Dependencies -->
-  <ItemGroup>
-    <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.0" />
-  </ItemGroup>
-
-  <!-- Project References -->
-  <ItemGroup>
-    <ProjectReference Include="..\MyCompany.OrderSystem.Core\MyCompany.OrderSystem.Core.csproj" />
-  </ItemGroup>
 </Project>
 ```
 

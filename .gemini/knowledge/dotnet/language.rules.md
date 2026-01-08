@@ -276,37 +276,23 @@ if (args is [var cmd, var file]) {
 **Severity: Major**
 
 **Rule**
-All public and internal classes, interfaces, methods, properties, and fields MUST have XML documentation comments. Include `<summary>`, `<param>`, `<returns>`, and `<exception>` as appropriate. Private members are excluded.
+All public and internal members MUST have XML documentation comments. 
+
+**Modern Syntax Addendum**
+When using **Primary Constructors**, parameters MUST be documented in the class-level `<summary>` or using `<param name="...">` tags at the class level, as there is no traditional constructor block to attach them to.
 
 **Bad Pattern**
 ```csharp
-public class UserService
-{
-    public User GetUser(int id)
-    {
-        return _repository.Find(id);
-    }
-}
+public class Service(ILogger logger); // No documentation for logger
 ```
 
 **Good Pattern**
 ```csharp
 /// <summary>
-/// Provides operations for managing users.
+/// Initializes a new instance of the Service class.
 /// </summary>
-public class UserService
-{
-    /// <summary>
-    /// Retrieves a user by their unique identifier.
-    /// </summary>
-    /// <param name="id">The unique identifier of the user.</param>
-    /// <returns>The user if found; otherwise, null.</returns>
-    /// <exception cref="ArgumentOutOfRangeException">Thrown when id is negative.</exception>
-    public User? GetUser(int id)
-    {
-        return _repository.Find(id);
-    }
-}
+/// <param name="logger">The logger instance.</param>
+public class Service(ILogger logger);
 ```
 
 **Rationale**

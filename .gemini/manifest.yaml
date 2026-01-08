@@ -1,40 +1,46 @@
 version: "1.0"
 agents:
   planner:
-    definition: agents/roles/planner.agent.md
+    definition: skills/planner/SKILL.md
     rules: []
 
   coder-dotnet:
-    definition: agents/roles/coder.dotnet.agent.md
+    definition: skills/coder-dotnet/SKILL.md
     rules:
-      - rules/dotnet/*.rules.md
+      - knowledge/dotnet/*.rules.md
 
   coder-typescript:
-    definition: agents/roles/coder.typescript.agent.md
+    definition: skills/coder-typescript/SKILL.md
     rules:
-      - rules/typescript/*.rules.md
+      - knowledge/typescript/*.rules.md
 
   reviewer-dotnet:
-    definition: agents/roles/reviewer.dotnet.agent.md
+    definition: skills/reviewer-dotnet/SKILL.md
     rules:
-      - rules/dotnet/*.rules.md
+      - knowledge/dotnet/*.rules.md
 
   reviewer-typescript:
-    definition: agents/roles/reviewer.typescript.agent.md
+    definition: skills/reviewer-typescript/SKILL.md
     rules:
-      - rules/typescript/*.rules.md
+      - knowledge/typescript/*.rules.md
 
   red-team:
-    definition: agents/roles/red-team.agent.md
+    definition: skills/red-team/SKILL.md
     rules: []
 
   meta:
-    definition: agents/roles/meta.agent.md
+    definition: knowledge/base/agent.contract.md # Meta agent is defined by the contract
     rules:
-      - rules/constitution/constitution.rules.md
+      - knowledge/constitution/constitution.rules.md
 
 constitution:
-  - rules/constitution/constitution.rules.md
+  - knowledge/constitution/constitution.rules.md
+  - knowledge/constitution/conflicts.rules.md
+  - knowledge/constitution/forbidden-goals.rules.md
 
 protocols:
-  orchestration: protocols/orchestration.protocol.md
+  orchestration: knowledge/protocols/orchestration.protocol.md
+  observability: knowledge/protocols/observability.protocol.md
+  execution-loop: knowledge/protocols/execution-loop.protocol.md
+
+libraries: .gemini/libraries.toml
