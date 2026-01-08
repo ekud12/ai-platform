@@ -1,0 +1,107 @@
+{
+  "id": "dotnet-memory",
+  "version": "1.0.0",
+  "domain": "dotnet",
+  "applies_to": [
+    "*.cs",
+    "*.csx"
+  ],
+  "rules": [
+    {
+      "id": "CS-MEM-001",
+      "title": "Dispose Pattern",
+      "severity": "critical",
+      "check": "Classes with unmanaged resources MUST implement IDisposable correctly.",
+      "bad_example": "public class Wrapper {\n    private IntPtr _handle;\n    // No Dispose method! Leak!\n}",
+      "good_example": "public class Wrapper : IDisposable {\n    private bool _disposed;\n    public void Dispose() { ... GC.SuppressFinalize(this); }\n}"
+    },
+    {
+      "id": "CS-MEM-002",
+      "title": "Using Statement",
+      "severity": "critical",
+      "check": "Always use using statement/declaration for IDisposable.",
+      "bad_example": "var stream = new FileStream(\"data.bin\", FileMode.Open);\nstream.Read(buffer); // If exception throws, stream is never closed",
+      "good_example": "using var stream = new FileStream(\"data.bin\", FileMode.Open);\nstream.Read(buffer);"
+    },
+    {
+      "id": "CS-MEM-003",
+      "title": "Span for Buffer Operations",
+      "severity": "major",
+      "check": "Use Span<T> over array copies for buffers.",
+      "bad_example": "byte[] slice = new byte[10];\nArray.Copy(buffer, 0, slice, 0, 10); // Allocates",
+      "good_example": "Span<byte> slice = buffer.AsSpan(0, 10); // No allocation"
+    },
+    {
+      "id": "CS-MEM-004",
+      "title": "MemoryPool for Large Buffers",
+      "severity": "major",
+      "check": "Buffers > 85kb MUST use MemoryPool<T> (avoid LOH).",
+      "bad_example": "byte[] huge = new byte[100000]; // Goes to LOH (Slow GC)",
+      "good_example": "using var owner = MemoryPool<byte>.Shared.Rent(100000);\nvar huge = owner.Memory;"
+    },
+    {
+      "id": "CS-MEM-005",
+      "title": "Stackalloc Limits",
+      "severity": "minor",
+      "check": "stackalloc MUST NOT exceed 1024 bytes (Stack Overflow risk).",
+      "bad_example": "Span<byte> buffer = stackalloc byte[10000]; // Dangerous",
+      "good_example": "Span<byte> buffer = stackalloc byte[512]; // Safe"
+    },
+    {
+      "id": "CS-MEM-006",
+      "title": "No Finalizers Without Necessity",
+      "severity": "info",
+      "check": "Do NOT add a destructor (~Class()) unless strictly wrapping unmanaged handles.",
+      "bad_example": "public class Logger {\n    ~Logger() { Flush(); } // Delays GC for no good reason\n}",
+      "good_example": "public class Logger : IDisposable {\n    public void Dispose() { Flush(); }\n}"
+    },
+    {
+      "id": "CS-MEM-007",
+      "title": "GC.SuppressFinalize",
+      "severity": "major",
+      "check": "If you have a finalizer, Dispose() MUST call GC.SuppressFinalize(this).",
+      "bad_example": "public void Dispose() { FreeNative(); } // GC still runs finalizer later",
+      "good_example": "public void Dispose() { \n    FreeNative();\n    GC.SuppressFinalize(this); \n}"
+    },
+    {
+      "id": "CS-MEM-008",
+      "title": "WeakReference for Caches",
+      "severity": "info",
+      "check": "Long-lived caches SHOULD use WeakReference to avoid memory leaks.",
+      "bad_example": "static Dictionary<string, User> _cache; // Holds references forever",
+      "good_example": "static Dictionary<string, WeakReference<User>> _cache;"
+    },
+    {
+      "id": "CS-MEM-009",
+      "title": "No Closure Allocations in Hot Paths",
+      "severity": "minor",
+      "check": "Lambdas in hot paths MUST NOT capture local variables (Allocates delegate + closure).",
+      "bad_example": "int id = 5;\n_cache.GetOrAdd(key, k => new Item(id)); // Captures 'id', allocates closure",
+      "good_example": "int id = 5;\n_cache.GetOrAdd(key, static (k, arg) => new Item(arg), id); // Static lambda, no allocation"
+    },
+    {
+      "id": "CS-MEM-010",
+      "title": "RecyclableMemoryStream",
+      "severity": "major",
+      "check": "High-throughput code MUST use RecyclableMemoryStream over MemoryStream.",
+      "bad_example": "using var ms = new MemoryStream(); // Allocates buffer every request",
+      "good_example": "using var ms = _manager.GetStream(); // Pools buffer"
+    },
+    {
+      "id": "CS-MEM-011",
+      "title": "Object Pooling",
+      "severity": "major",
+      "check": "Frequently allocated objects in hot paths SHOULD use ObjectPool<T>.",
+      "bad_example": "// In request handler - allocates StringBuilder per request\nvar sb = new StringBuilder();",
+      "good_example": "private readonly ObjectPool<StringBuilder> _pool =\n    new DefaultObjectPoolProvider().CreateStringBuilderPool();\n\n// In request handler\nvar sb = _pool.Get();\ntry {\n    // use sb\n} finally {\n    _pool.Return(sb);\n}"
+    },
+    {
+      "id": "CS-MEM-012",
+      "title": "Pinned Object Management",
+      "severity": "critical",
+      "check": "GCHandle.Alloc with Pinned MUST be released in finally block. Prefer fixed statement.",
+      "bad_example": "var handle = GCHandle.Alloc(buffer, GCHandleType.Pinned);\nNativeMethod(handle.AddrOfPinnedObject());\n// If exception occurs, handle is never freed - memory leak!",
+      "good_example": "// Option 1: fixed statement (preferred)\nfixed (byte* ptr = buffer) {\n    NativeMethod((IntPtr)ptr);\n}\n\n// Option 2: GCHandle with proper cleanup\nvar handle = GCHandle.Alloc(buffer, GCHandleType.Pinned);\ntry {\n    NativeMethod(handle.AddrOfPinnedObject());\n} finally {\n    handle.Free();\n}"
+    }
+  ]
+}

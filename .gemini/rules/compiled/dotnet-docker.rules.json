@@ -1,0 +1,54 @@
+{
+  "id": "dotnet-docker",
+  "version": "1.0.0",
+  "domain": "dotnet",
+  "applies_to": [
+    "*.cs",
+    "*.csx"
+  ],
+  "rules": [
+    {
+      "id": "CS-DOCKER-001",
+      "title": "Multi-Stage Builds",
+      "severity": "critical",
+      "check": "Dockerfiles MUST use multi-stage builds to minimize image size.",
+      "bad_example": "FROM mcr.microsoft.com/dotnet/sdk:10.0\nWORKDIR /app\nCOPY . .\nRUN dotnet publish -c Release -o /app/publish\nENTRYPOINT [\"dotnet\", \"MyApp.dll\"]\n# Image includes full SDK (~900MB)",
+      "good_example": "# Build stage\nFROM mcr.microsoft.com/dotnet/sdk:10.0 AS build\nWORKDIR /src\nCOPY [\"MyApp.csproj\", \".\"]\nRUN dotnet restore\nCOPY . .\nRUN dotnet publish -c Release -o /app/publish --no-restore\n\n# Runtime stage\nFROM mcr.microsoft.com/dotnet/aspnet:10.0 AS runtime\nWORKDIR /app\nCOPY --from=build /app/publish .\nEXPOSE 8080\nENTRYPOINT [\"dotnet\", \"MyApp.dll\"]\n# Final image is ~200MB",
+      "rationale": "Multi-stage builds exclude SDK and build artifacts from the final image, reducing size and attack surface."
+    },
+    {
+      "id": "CS-DOCKER-002",
+      "title": "Health Check in Dockerfile",
+      "severity": "major",
+      "check": "Dockerfiles MUST include HEALTHCHECK instruction for orchestrator health monitoring.",
+      "bad_example": "FROM mcr.microsoft.com/dotnet/aspnet:10.0\nCOPY --from=build /app/publish .\nENTRYPOINT [\"dotnet\", \"MyApp.dll\"]\n# No health check - orchestrator can't detect unhealthy containers",
+      "good_example": "FROM mcr.microsoft.com/dotnet/aspnet:10.0\nCOPY --from=build /app/publish .\n\nHEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \\\n  CMD curl -f http://localhost:8080/health || exit 1\n\nEXPOSE 8080\nENTRYPOINT [\"dotnet\", \"MyApp.dll\"]"
+    },
+    {
+      "id": "CS-DOCKER-003",
+      "title": "Docker Compose Service Naming",
+      "severity": "major",
+      "check": "Docker Compose services MUST use lowercase kebab-case names.",
+      "bad_example": "services:\n  MyApp_API:\n  userService:\n  ContentAPI:",
+      "good_example": "services:\n  my-app-api:\n  user-service:\n  content-api:",
+      "rationale": "Consistent naming enables predictable DNS resolution within Docker networks."
+    },
+    {
+      "id": "CS-DOCKER-004",
+      "title": "Local Development Emulators",
+      "severity": "major",
+      "check": "Docker Compose MUST include emulators for cloud services in development.",
+      "bad_example": "# Requires real Azure subscription for local dev\nservices:\n  api:\n    environment:\n      - AZURE_STORAGE_CONNECTION=DefaultEndpointsProtocol=https;AccountName=...",
+      "good_example": "services:\n  # Azure Storage emulator\n  storage:\n    image: mcr.microsoft.com/azure-storage/azurite\n    ports:\n      - \"10000:10000\"  # Blob\n      - \"10001:10001\"  # Queue\n      - \"10002:10002\"  # Table\n\n  # Azure Service Bus emulator\n  servicebus:\n    image: mcr.microsoft.com/azure-messaging/servicebus-emulator\n    ports:\n      - \"5672:5672\"\n\n  # Redis\n  redis:\n    image: redis:7-alpine\n    ports:\n      - \"6379:6379\"\n\n  # SQL Server\n  db:\n    image: mcr.microsoft.com/mssql/server:2022-latest\n    environment:\n      - ACCEPT_EULA=Y\n      - MSSQL_SA_PASSWORD=${DB_PASSWORD}",
+      "rationale": "Developers should not need cloud subscriptions to run the application locally."
+    },
+    {
+      "id": "CS-DOCKER-005",
+      "title": "Environment-Specific Overrides",
+      "severity": "major",
+      "check": "Development-specific settings MUST be in docker-compose.override.yml, not the base file.",
+      "good_example": "# docker-compose.yml - base config (production-like)\nservices:\n  api:\n    image: myregistry/my-api:${TAG:-latest}\n    environment:\n      - ASPNETCORE_ENVIRONMENT=Production\n\n# docker-compose.override.yml - dev overrides (auto-loaded)\nservices:\n  api:\n    build:\n      context: .\n      dockerfile: src/MyApi/Dockerfile\n    environment:\n      - ASPNETCORE_ENVIRONMENT=Development\n      - ASPNETCORE_URLS=http://+:8080\n    ports:\n      - \"8080:8080\"\n    volumes:\n      - ./src:/app/src:ro  # Hot reload",
+      "rationale": "Base compose file should be environment-agnostic. Overrides customize for local development."
+    }
+  ]
+}

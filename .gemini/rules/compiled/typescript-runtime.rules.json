@@ -1,0 +1,10 @@
+{
+  "id": "typescript-runtime",
+  "version": "1.0.0",
+  "domain": "typescript",
+  "applies_to": [
+    "*.ts",
+    "*.tsx"
+  ],
+  "rules": []
+}

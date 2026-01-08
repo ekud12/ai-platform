@@ -1,0 +1,96 @@
+{
+  "id": "javascript-modernization",
+  "version": "1.0.0",
+  "domain": "javascript",
+  "applies_to": [
+    "*.js",
+    "*.jsx",
+    "*.mjs"
+  ],
+  "rules": [
+    {
+      "id": "JS-MOD-001",
+      "title": "ESM Modules",
+      "severity": "info",
+      "check": "All JavaScript files must use ES modules (import/export). CommonJS (require/module.exports) is forbidden for new code.",
+      "rationale": "ESM is the JavaScript standard. It enables tree shaking, static analysis, and TypeScript migration."
+    },
+    {
+      "id": "JS-MOD-002",
+      "title": "TypeScript Ready",
+      "severity": "info",
+      "check": "JavaScript code must be structured for TypeScript migration. JSDoc type annotations are required.",
+      "rationale": "JSDoc enables TypeScript to understand JavaScript. It provides incremental typing before full migration."
+    },
+    {
+      "id": "JS-MOD-003",
+      "title": "Strict Mode",
+      "severity": "info",
+      "check": "All JavaScript files must use strict mode.",
+      "rationale": "Strict mode catches common errors and prevents unsafe practices. It is required for modules and improves optimization."
+    },
+    {
+      "id": "JS-MOD-004",
+      "title": "Const Over Let",
+      "severity": "info",
+      "check": "const must be used by default. let only for variables that are reassigned.",
+      "rationale": "const prevents accidental reassignment and signals intent. let should be reserved for loop counters and values that genuinely change."
+    },
+    {
+      "id": "JS-MOD-005",
+      "title": "Arrow Functions",
+      "severity": "info",
+      "check": "Arrow functions must be used for callbacks and short functions. Function declarations for named functions.",
+      "rationale": "Arrow functions have lexical this and concise syntax. They prevent this-related bugs in callbacks."
+    },
+    {
+      "id": "JS-MOD-006",
+      "title": "Template Literals",
+      "severity": "info",
+      "check": "String concatenation must use template literals for any non-trivial cases.",
+      "rationale": "Template literals are more readable than concatenation. They enable multiline strings and expression embedding."
+    },
+    {
+      "id": "JS-MOD-007",
+      "title": "Destructuring",
+      "severity": "info",
+      "check": "Object and array destructuring must be used for extracting multiple values.",
+      "rationale": "Destructuring is more concise and clearer than repeated property access. It documents the values being used."
+    },
+    {
+      "id": "JS-MOD-008",
+      "title": "Spread Operator",
+      "severity": "info",
+      "check": "Spread operator must be used for object copying and array manipulation.",
+      "rationale": "Spread is clearer than Object.assign or concat. It enables immutable update patterns."
+    },
+    {
+      "id": "JS-MOD-009",
+      "title": "Optional Chaining",
+      "severity": "info",
+      "check": "Optional chaining (?.) must be used for nullable property access.",
+      "rationale": "Optional chaining is safer and more concise than && chains. It clearly expresses nullable intent."
+    },
+    {
+      "id": "JS-MOD-010",
+      "title": "Nullish Coalescing",
+      "severity": "info",
+      "check": "Nullish coalescing (??) must be used for defaults instead of || when zero/empty string are valid.",
+      "rationale": "|| treats falsy values as missing. ?? only treats null/undefined as missing, preserving valid empty values."
+    },
+    {
+      "id": "JS-MOD-011",
+      "title": "Object Shorthand",
+      "severity": "info",
+      "check": "Use shorthand property and method syntax in object literals.",
+      "rationale": "Shorthand is more concise and reduces duplication. It clearly shows when property name matches variable name."
+    },
+    {
+      "id": "JS-MOD-012",
+      "title": "Class Fields",
+      "severity": "info",
+      "check": "Use public class fields instead of constructor assignment for simple properties.",
+      "rationale": "Class fields are more declarative and concise. They clearly show class structure at the top of the definition."
+    }
+  ]
+}

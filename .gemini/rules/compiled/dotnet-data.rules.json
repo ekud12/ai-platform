@@ -1,0 +1,149 @@
+{
+  "id": "dotnet-data",
+  "version": "1.0.0",
+  "domain": "dotnet",
+  "applies_to": [
+    "*.cs",
+    "*.csx"
+  ],
+  "rules": [
+    {
+      "id": "CS-DATA-001",
+      "title": "Repository Pattern",
+      "severity": "major",
+      "check": "Business logic MUST use repository/data interfaces, NOT DbContext directly.",
+      "bad_example": "// In Service\n_dbContext.Users.Add(user);",
+      "good_example": "// In Service\nawait _userRepository.AddAsync(user);"
+    },
+    {
+      "id": "CS-DATA-002",
+      "title": "Async Data Access",
+      "severity": "critical",
+      "check": "All data I/O MUST be async.",
+      "bad_example": "var users = _context.Users.ToList(); // Blocking",
+      "good_example": "var users = await _context.Users.ToListAsync(ct);"
+    },
+    {
+      "id": "CS-DATA-003",
+      "title": "No Tracking for Read-Only",
+      "severity": "major",
+      "check": "Read-only queries MUST use AsNoTracking().",
+      "bad_example": "var users = await _context.Users.ToListAsync(); // Tracks changes overhead",
+      "good_example": "var users = await _context.Users.AsNoTracking().ToListAsync();"
+    },
+    {
+      "id": "CS-DATA-004",
+      "title": "Explicit Loading",
+      "severity": "critical",
+      "check": "Lazy loading is FORBIDDEN. Use explicit .Include().",
+      "bad_example": "// Lazy loading enabled globally\nvar orders = user.Orders; // N+1 Risk",
+      "good_example": "var user = await _context.Users.Include(u => u.Orders).FirstAsync();"
+    },
+    {
+      "id": "CS-DATA-005",
+      "title": "Projection Queries",
+      "severity": "major",
+      "check": "Fetch only needed columns using .Select(), NOT full entities.",
+      "bad_example": "var user = await _context.Users.FirstAsync(u => u.Id == 1);\nreturn user.Name; // Loaded all columns uselessly",
+      "good_example": "var name = await _context.Users\n    .Where(u => u.Id == 1)\n    .Select(u => u.Name)\n    .FirstOrDefaultAsync();"
+    },
+    {
+      "id": "CS-DATA-006",
+      "title": "Transaction Scope",
+      "severity": "critical",
+      "check": "Multi-step mutations MUST use explicit transactions.",
+      "bad_example": "await _repo.Debit(100);\n// If crash here, money is lost\nawait _repo.Credit(100);",
+      "good_example": "using var transaction = await _context.Database.BeginTransactionAsync();\ntry {\n    await _repo.Debit(100);\n    await _repo.Credit(100);\n    await transaction.CommitAsync();\n} catch {\n    await transaction.RollbackAsync();\n}"
+    },
+    {
+      "id": "CS-DATA-007",
+      "title": "Optimistic Concurrency",
+      "severity": "major",
+      "check": "Entities with concurrent access MUST have concurrency tokens (e.g., RowVersion).",
+      "bad_example": "// Last writer wins (Silent overwrite)\n_context.Update(user);",
+      "good_example": "// Throws DbUpdateConcurrencyException if changed\n_context.Entry(user).Property(p => p.RowVersion).OriginalValue = version;"
+    },
+    {
+      "id": "CS-DATA-008",
+      "title": "Query Timeout",
+      "severity": "critical",
+      "check": "All database queries MUST have timeouts configured.",
+      "bad_example": "// Default timeout might be infinite\nawait cmd.ExecuteNonQueryAsync();",
+      "good_example": "cmd.CommandTimeout = 30; // Seconds\nawait cmd.ExecuteNonQueryAsync();"
+    },
+    {
+      "id": "CS-DATA-009",
+      "title": "Connection Resilience",
+      "severity": "major",
+      "check": "Enable Retry Policies (Resiliency) for transient failures.",
+      "bad_example": "services.AddDbContext<AppDbContext>();",
+      "good_example": "services.AddDbContext<AppDbContext>(options =>\n    options.UseSqlServer(conn, o => o.EnableRetryOnFailure()));"
+    },
+    {
+      "id": "CS-DATA-010",
+      "title": "Index Awareness",
+      "severity": "minor",
+      "check": "Queries on large tables MUST use indexed columns.",
+      "bad_example": "// 'Bio' is nvarchar(max) and unindexed\nvar u = await _users.FirstAsync(u => u.Bio.Contains(\"Admin\"));",
+      "good_example": "// 'Email' is indexed\nvar u = await _users.FirstAsync(u => u.Email == \"admin@corp.com\");"
+    },
+    {
+      "id": "CS-DATA-011",
+      "title": "Bulk Operations",
+      "severity": "major",
+      "check": "Batch inserts/updates MUST use bulk methods for operations exceeding 100 records.",
+      "bad_example": "foreach (var item in items) {\n    _context.Items.Add(item);\n    await _context.SaveChangesAsync(); // N round trips!\n}",
+      "good_example": "// Option 1: Batch with single SaveChanges\n_context.Items.AddRange(items);\nawait _context.SaveChangesAsync();\n\n// Option 2: Use bulk extensions for very large sets\nawait _context.BulkInsertAsync(items); // EFCore.BulkExtensions"
+    },
+    {
+      "id": "CS-DATA-012",
+      "title": "Soft Delete Pattern",
+      "severity": "major",
+      "check": "Soft deletes MUST use global query filters. Direct deletion of soft-delete entities is forbidden.",
+      "bad_example": "// Manual filtering everywhere - easy to forget\nvar users = await _context.Users.Where(u => !u.IsDeleted).ToListAsync();\n\n// Hard delete on soft-delete entity\n_context.Users.Remove(user);",
+      "good_example": "// In DbContext configuration\nmodelBuilder.Entity<User>().HasQueryFilter(u => !u.IsDeleted);\n\n// Soft delete implementation\npublic async Task DeleteAsync(User user) {\n    user.IsDeleted = true;\n    user.DeletedAt = DateTime.UtcNow;\n    await _context.SaveChangesAsync();\n}\n\n// To include deleted: _context.Users.IgnoreQueryFilters()"
+    },
+    {
+      "id": "CS-DATA-013",
+      "title": "Audit Columns",
+      "severity": "major",
+      "check": "Entities MUST have audit columns (CreatedAt, UpdatedAt, CreatedBy) populated automatically.",
+      "bad_example": "// Manual audit - inconsistent and easy to forget\nuser.CreatedAt = DateTime.UtcNow;\nuser.CreatedBy = currentUser;\n_context.Users.Add(user);",
+      "good_example": "// SaveChanges interceptor\npublic override Task<int> SaveChangesAsync(CancellationToken ct = default) {\n    foreach (var entry in ChangeTracker.Entries<IAuditable>()) {\n        if (entry.State == EntityState.Added) {\n            entry.Entity.CreatedAt = DateTime.UtcNow;\n            entry.Entity.CreatedBy = _currentUser.Id;\n        }\n        entry.Entity.UpdatedAt = DateTime.UtcNow;\n    }\n    return base.SaveChangesAsync(ct);\n}"
+    },
+    {
+      "id": "CS-DATA-014",
+      "title": "Connection Pool Sizing",
+      "severity": "major",
+      "check": "Connection pool size MUST be explicitly configured based on expected concurrency.",
+      "bad_example": "// Default pool size may be too small for high-traffic apps\nvar conn = \"Server=db;Database=app;\";",
+      "good_example": "// Explicitly size pool based on workload\nvar conn = \"Server=db;Database=app;Max Pool Size=100;Min Pool Size=10;\";\n\n// Monitor pool exhaustion\nbuilder.Services.AddHealthChecks()\n    .AddSqlServer(conn, name: \"database\");"
+    },
+    {
+      "id": "CS-DATA-015",
+      "title": "DTO Record Types",
+      "severity": "major",
+      "check": "DTOs MUST be immutable records with required properties or primary constructors.",
+      "bad_example": "public class UserDto\n{\n    public int Id { get; set; }\n    public string Name { get; set; }  // Nullable warning, mutable\n}",
+      "good_example": "public record UserDto\n{\n    public required int Id { get; init; }\n    public required string Name { get; init; }\n}\n\n// Or with primary constructor\npublic record UserDto(int Id, string Name);\n\n// Or with optional properties\npublic record UserDto\n{\n    public required int Id { get; init; }\n    public required string Name { get; init; }\n    public string? Email { get; init; }  // Explicitly optional\n}",
+      "rationale": "Records provide value equality, immutability, and concise syntax. Required properties ensure complete initialization."
+    },
+    {
+      "id": "CS-DATA-016",
+      "title": "DTO Organization in Contracts",
+      "severity": "major",
+      "check": "DTOs MUST be organized in Dto/ folder with subdirectories by category.",
+      "bad_example": "Domain.Contracts/\n├── UserDto.cs\n├── OrderDto.cs\n├── PageDto.cs\n├── MediaDto.cs\n├── UserValidator.cs\n└── OrderValidator.cs",
+      "good_example": "Domain.Contracts/\n├── Dto/\n│   ├── Core/\n│   │   └── BaseDto.cs\n│   ├── Users/\n│   │   ├── UserDto.cs\n│   │   └── UserProfileDto.cs\n│   ├── Orders/\n│   │   ├── OrderDto.cs\n│   │   └── OrderLineDto.cs\n│   ├── Content/\n│   │   ├── PageDto.cs\n│   │   └── MediaDto.cs\n│   └── Enums/\n│       └── OrderStatus.cs\n└── Validators/\n    ├── UserDtoValidator.cs\n    └── OrderDtoValidator.cs"
+    },
+    {
+      "id": "CS-DATA-017",
+      "title": "Generic Response Wrapper",
+      "severity": "info",
+      "check": "List endpoints SHOULD use a generic response wrapper with items and total count.",
+      "bad_example": "// Inconsistent return types\npublic async Task<List<UserDto>> GetUsersAsync() => ...\npublic async Task<UserDto[]> GetOrdersAsync() => ...\npublic async Task<IEnumerable<PageDto>> GetPagesAsync() => ...",
+      "good_example": "public record QueryResponse<T>\n{\n    public required IReadOnlyList<T> Items { get; init; }\n    public required int Total { get; init; }\n}\n\n// Usage\npublic async Task<QueryResponse<UserDto>> GetUsersAsync(int page, int size, CancellationToken ct)\n{\n    var items = await _db.Users\n        .Skip((page - 1) * size)\n        .Take(size)\n        .Select(u => u.ToDto())\n        .ToListAsync(ct);\n\n    var total = await _db.Users.CountAsync(ct);\n\n    return new QueryResponse<UserDto> { Items = items, Total = total };\n}",
+      "rationale": "Consistent response structure enables client-side pagination handling and generic UI components."
+    }
+  ]
+}

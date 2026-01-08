@@ -1,0 +1,89 @@
+{
+  "id": "dotnet-solution",
+  "version": "1.0.0",
+  "domain": "dotnet",
+  "applies_to": [
+    "*.cs",
+    "*.csx"
+  ],
+  "rules": [
+    {
+      "id": "CS-SLN-001",
+      "title": "Domain-Based Project Organization",
+      "severity": "major",
+      "check": "Large solutions MUST organize projects into domain folders under src/Domains/{DomainName}/.",
+      "bad_example": "src/\n├── MyApp.Api/\n├── MyApp.Services/\n├── MyApp.Data/\n├── MyApp.Auth/\n├── MyApp.AuthServices/\n└── MyApp.AuthData/",
+      "good_example": "src/\n├── Domains/\n│   ├── Auth/\n│   │   ├── Auth.Api/\n│   │   ├── Auth.Contracts/\n│   │   └── Auth.Orchestrator/\n│   └── Content/\n│       ├── Content.Api/\n│       ├── Content.Contracts/\n│       └── Content.Orchestrator/\n└── Infrastructure/\n    ├── Infra.Cache/\n    └── Infra.Messaging/"
+    },
+    {
+      "id": "CS-SLN-002",
+      "title": "Domain Project Naming Convention",
+      "severity": "major",
+      "check": "Domain projects MUST follow {Domain}.{Layer} naming: Api, Contracts, Client, Orchestrator, Webhooks.",
+      "bad_example": "Appointments/\n├── AppointmentsController/\n├── AppointmentsDtos/\n└── AppointmentsLogic/",
+      "good_example": "Appointments/\n├── Appointments.Api/           # REST endpoints\n├── Appointments.Contracts/     # DTOs, validators\n├── Appointments.Client/        # HTTP clients for external APIs\n├── Appointments.Orchestrator/  # Business logic, caching\n└── Appointments.Webhooks/      # Webhook handlers (optional)"
+    },
+    {
+      "id": "CS-SLN-003",
+      "title": "Infrastructure Library Naming",
+      "severity": "major",
+      "check": "Shared infrastructure libraries MUST use Infra.{Category} naming convention.",
+      "bad_example": "Infrastructure/\n├── SharedCache/\n├── CommonMessaging/\n└── UtilityHelpers/",
+      "good_example": "Infrastructure/\n├── Infra.Cache/\n├── Infra.Messaging/\n├── Infra.Messaging.Nats/      # Implementation-specific\n├── Infra.Messaging.ServiceBus/\n├── Infra.Observability/\n└── Infra.Primitives/"
+    },
+    {
+      "id": "CS-SLN-004",
+      "title": "Directory.Build.props Required",
+      "severity": "critical",
+      "check": "Solutions MUST have a root Directory.Build.props enforcing global settings.",
+      "bad_example": "<!-- Each .csproj repeats settings -->\n<PropertyGroup>\n  <TargetFramework>net10.0</TargetFramework>\n  <Nullable>enable</Nullable>\n  <ImplicitUsings>enable</ImplicitUsings>\n</PropertyGroup>",
+      "good_example": "<!-- Directory.Build.props at solution root -->\n<Project>\n  <PropertyGroup>\n    <TargetFramework>net10.0</TargetFramework>\n    <LangVersion>latest</LangVersion>\n    <Nullable>enable</Nullable>\n    <ImplicitUsings>enable</ImplicitUsings>\n    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>\n    <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>\n  </PropertyGroup>\n</Project>"
+    },
+    {
+      "id": "CS-SLN-005",
+      "title": "Central Package Management",
+      "severity": "critical",
+      "check": "Solutions MUST use Directory.Packages.props for centralized NuGet version management.",
+      "bad_example": "<!-- In each .csproj -->\n<PackageReference Include=\"Serilog\" Version=\"9.0.0\" />\n<PackageReference Include=\"Serilog\" Version=\"8.0.0\" /> <!-- Different version! -->",
+      "good_example": "<!-- Directory.Packages.props -->\n<Project>\n  <PropertyGroup>\n    <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>\n  </PropertyGroup>\n  <ItemGroup>\n    <PackageVersion Include=\"Serilog\" Version=\"9.0.0\" />\n  </ItemGroup>\n</Project>\n\n<!-- In .csproj - no version needed -->\n<PackageReference Include=\"Serilog\" />"
+    },
+    {
+      "id": "CS-SLN-006",
+      "title": "Global.json SDK Pinning",
+      "severity": "major",
+      "check": "Solutions MUST have global.json pinning the .NET SDK version.",
+      "bad_example": "# No global.json - uses whatever SDK is installed",
+      "good_example": "{\n  \"sdk\": {\n    \"version\": \"10.0.100\",\n    \"rollForward\": \"latestFeature\",\n    \"allowPrerelease\": false\n  }\n}"
+    },
+    {
+      "id": "CS-SLN-007",
+      "title": "Template Projects for Scaffolding",
+      "severity": "info",
+      "check": "Solutions with repeated patterns SHOULD have template projects under src/Templates/.",
+      "good_example": "src/Templates/\n├── Template.Api/           # Base API with auth, OpenAPI, compression\n├── Template.Job/           # NATS job worker scaffold\n├── Template.WebWorker/     # Background worker scaffold\n└── Template.Extensions/    # Extension method patterns"
+    },
+    {
+      "id": "CS-SLN-008",
+      "title": "Contracts Project Isolation",
+      "severity": "critical",
+      "check": "DTOs and validation rules MUST be in a separate {Domain}.Contracts project with NO business logic dependencies.",
+      "bad_example": "<!-- Contracts.csproj referencing business logic -->\n<ProjectReference Include=\"..\\Domain.Services\\Domain.Services.csproj\" />",
+      "good_example": "<!-- Contracts.csproj - minimal dependencies -->\n<PackageReference Include=\"FluentValidation\" />\n<PackageReference Include=\"System.Text.Json\" />\n<!-- No project references except Infra.Primitives -->",
+      "rationale": "Contracts projects can be shared as NuGet packages. They must not pull in business logic or infrastructure."
+    },
+    {
+      "id": "CS-SLN-009",
+      "title": "Tooling Projects for Analyzers",
+      "severity": "info",
+      "check": "Custom Roslyn analyzers and source generators SHOULD be in src/Tooling/ targeting netstandard2.0.",
+      "good_example": "src/Tooling/\n├── Tooling.Analyzers/         # Custom architectural rules\n├── Tooling.CodeFix/           # Auto-fix providers\n└── Tooling.SourceGenerators/  # Custom generators"
+    },
+    {
+      "id": "CS-SLN-010",
+      "title": "Scripts and Utilities Folder",
+      "severity": "info",
+      "check": "Utility scripts MUST be in a scripts/ folder at solution root, organized by purpose.",
+      "good_example": "scripts/\n├── database/\n│   ├── migrate.py\n│   └── seed.sql\n├── deployment/\n│   ├── deploy.ps1\n│   └── rollback.ps1\n└── utilities/\n    └── CompressPoi/    # .NET utility project"
+    }
+  ]
+}

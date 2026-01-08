@@ -1,0 +1,76 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "AI-OS Rule Definition",
+  "description": "Schema for machine-readable code rules that enforce hard constraints",
+  "type": "object",
+  "required": ["id", "version", "domain", "rules"],
+  "properties": {
+    "id": {
+      "type": "string",
+      "description": "Unique ruleset identifier (e.g., 'dotnet-language')"
+    },
+    "version": {
+      "type": "string",
+      "description": "Semantic version of the ruleset"
+    },
+    "domain": {
+      "type": "string",
+      "enum": ["dotnet", "typescript", "general"],
+      "description": "Technology domain"
+    },
+    "applies_to": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "File glob patterns (e.g., ['*.cs', '*.csx'])"
+    },
+    "rules": {
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/Rule"
+      }
+    }
+  },
+  "definitions": {
+    "Rule": {
+      "type": "object",
+      "required": ["id", "title", "severity", "check"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[A-Z]{2,4}-[A-Z]{2,6}-\\d{3}$",
+          "description": "Rule ID (e.g., 'CS-LANG-005')"
+        },
+        "title": {
+          "type": "string",
+          "description": "Short rule title"
+        },
+        "severity": {
+          "type": "string",
+          "enum": ["critical", "major", "minor", "info"],
+          "description": "critical/major = hard block, minor/info = warning"
+        },
+        "check": {
+          "type": "string",
+          "description": "What the reviewer must verify (actionable instruction)"
+        },
+        "bad_example": {
+          "type": "string",
+          "description": "Code that violates this rule"
+        },
+        "good_example": {
+          "type": "string",
+          "description": "Code that follows this rule"
+        },
+        "rationale": {
+          "type": "string",
+          "description": "Why this rule exists"
+        },
+        "auto_detectable": {
+          "type": "boolean",
+          "default": true,
+          "description": "Can this be detected by code inspection?"
+        }
+      }
+    }
+  }
+}

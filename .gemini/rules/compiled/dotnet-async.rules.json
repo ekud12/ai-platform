@@ -1,0 +1,91 @@
+{
+  "id": "dotnet-async",
+  "version": "1.0.0",
+  "domain": "dotnet",
+  "applies_to": [
+    "*.cs",
+    "*.csx"
+  ],
+  "rules": [
+    {
+      "id": "CS-ASYNC-001",
+      "title": "CancellationToken Required",
+      "severity": "critical",
+      "check": "All async methods performing I/O or long-running operations MUST accept a CancellationToken.",
+      "bad_example": "public async Task<User> GetUserAsync(int id) {\n    return await _db.Users.Find(id);\n}",
+      "good_example": "public async Task<User> GetUserAsync(int id, CancellationToken ct) {\n    return await _db.Users.Find(id, ct);\n}"
+    },
+    {
+      "id": "CS-ASYNC-002",
+      "title": "CancellationToken Last Parameter",
+      "severity": "minor",
+      "check": "CancellationToken MUST be the last parameter in the method signature.",
+      "bad_example": "public async Task Do(CancellationToken ct, int data) { ... }",
+      "good_example": "public async Task Do(int data, CancellationToken ct = default) { ... }"
+    },
+    {
+      "id": "CS-ASYNC-003",
+      "title": "Async Suffix",
+      "severity": "info",
+      "check": "Async methods MUST have the Async suffix (except controllers/event handlers).",
+      "bad_example": "public async Task GetData() { ... }",
+      "good_example": "public async Task GetDataAsync() { ... }"
+    },
+    {
+      "id": "CS-ASYNC-004",
+      "title": "No Async Void",
+      "severity": "critical",
+      "check": "async void is STRICTLY FORBIDDEN (except for top-level event handlers). It crashes the process on exception.",
+      "bad_example": "public async void SaveData() { // CRASH RISK\n    await _repo.Save();\n}",
+      "good_example": "public async Task SaveDataAsync() {\n    await _repo.Save();\n}"
+    },
+    {
+      "id": "CS-ASYNC-005",
+      "title": "ConfigureAwait(false) in Libraries",
+      "severity": "major",
+      "check": "Library code MUST use ConfigureAwait(false) to prevent context blocking.",
+      "bad_example": "// In a Class Library\nawait _file.ReadAsync();",
+      "good_example": "// In a Class Library\nawait _file.ReadAsync().ConfigureAwait(false);"
+    },
+    {
+      "id": "CS-ASYNC-006",
+      "title": "No Sync Over Async",
+      "severity": "critical",
+      "check": "NEVER block on async code using .Result or .Wait(). It causes deadlocks.",
+      "bad_example": "var data = GetDataAsync().Result; // DEADLOCK",
+      "good_example": "var data = await GetDataAsync();"
+    },
+    {
+      "id": "CS-ASYNC-007",
+      "title": "ValueTask Usage",
+      "severity": "major",
+      "check": "Use ValueTask<T> for hot path methods that often complete synchronously to reduce allocations.",
+      "bad_example": "// In a cache lookup that usually hits\npublic async Task<User?> GetCachedUserAsync(int id) {\n    if (_cache.TryGetValue(id, out var user))\n        return user; // Allocates Task even for sync completion\n    return await _db.GetUserAsync(id);\n}",
+      "good_example": "public ValueTask<User?> GetCachedUserAsync(int id) {\n    if (_cache.TryGetValue(id, out var user))\n        return ValueTask.FromResult(user); // No allocation\n    return new ValueTask<User?>(GetFromDbAsync(id));\n}"
+    },
+    {
+      "id": "CS-ASYNC-008",
+      "title": "Async Disposal",
+      "severity": "major",
+      "check": "Classes with async cleanup MUST implement IAsyncDisposable and consumers MUST use await using.",
+      "bad_example": "public class DbConnection : IDisposable {\n    public void Dispose() {\n        _connection.CloseAsync().Wait(); // Blocking!\n    }\n}",
+      "good_example": "public class DbConnection : IAsyncDisposable {\n    public async ValueTask DisposeAsync() {\n        await _connection.CloseAsync();\n    }\n}\n\n// Usage\nawait using var conn = new DbConnection();"
+    },
+    {
+      "id": "CS-ASYNC-009",
+      "title": "Timeout All HTTP Calls",
+      "severity": "major",
+      "check": "HTTP client calls MUST have a timeout configured.",
+      "bad_example": "var http = new HttpClient();\nawait http.GetAsync(url); // May hang forever",
+      "good_example": "var http = new HttpClient { Timeout = TimeSpan.FromSeconds(30) };\nawait http.GetAsync(url, ct);"
+    },
+    {
+      "id": "CS-ASYNC-010",
+      "title": "Async Streams",
+      "severity": "major",
+      "check": "Use IAsyncEnumerable<T> for streaming data instead of returning Task<List<T>>.",
+      "bad_example": "public async Task<List<Order>> GetAllOrdersAsync() {\n    var orders = new List<Order>();\n    await foreach (var order in _db.Orders.AsAsyncEnumerable()) {\n        orders.Add(order); // Buffers everything in memory\n    }\n    return orders;\n}",
+      "good_example": "public async IAsyncEnumerable<Order> GetAllOrdersAsync(\n    [EnumeratorCancellation] CancellationToken ct = default) {\n    await foreach (var order in _db.Orders.AsAsyncEnumerable().WithCancellation(ct)) {\n        yield return order; // Streams one at a time\n    }\n}"
+    }
+  ]
+}

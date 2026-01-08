@@ -1,0 +1,10 @@
+{
+  "id": "dotnet-modernization",
+  "version": "1.0.0",
+  "domain": "dotnet",
+  "applies_to": [
+    "*.cs",
+    "*.csx"
+  ],
+  "rules": []
+}

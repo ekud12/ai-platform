@@ -1,0 +1,37 @@
+{
+  "permissions": {
+    "allow": [
+      "WebSearch",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:aipositive.substack.com)",
+      "WebFetch(domain:addyo.substack.com)",
+      "WebFetch(domain:www.philschmid.de)",
+      "WebFetch(domain:geminicli.com)",
+      "WebFetch(domain:codelabs.developers.google.com)",
+      "WebFetch(domain:medium.com)",
+      "Bash(mkdir -p:*)",
+      "WebFetch(domain:google.github.io)",
+      "WebFetch(domain:developers.googleblog.com)",
+      "Bash(tree:*)",
+      "Bash(dir:*)",
+      "Bash(cat:*)",
+      "Bash(find:*)",
+      "Bash(gemini --help:*)",
+      "Bash(gemini:*)",
+      "Bash(python:*)",
+      "Bash(for f in docs/README.AGENTS.md docs/README.HOW-IT-WORKS.md docs/README.RULEBOOKS.md docs/README.GOVERNANCE.md memory/lessons.md memory/architecture.map.md rules/constitution/constitution.rules.md agents/_base/agent.contract.md)",
+      "Bash(do if [ -f \"$f\" ])",
+      "Bash(then echo \"OK: $f\")",
+      "Bash(else echo \"MISSING: $f\")",
+      "Bash(fi)",
+      "Bash(done)",
+      "Bash(git -C \"C:\\\\Projects\\\\ai-os\" log --oneline)",
+      "Bash(for f in agents/roles/*.agent.md agents/_base/*.md rules/**/*.rules.md protocols/*.protocol.md topology/*.md policies/*.md policies/*.toml hooks/*.json hooks/*.ps1 commands/*.toml tools/*.ps1 tools/*.js tests/*.md manuals/*.md)",
+      "Bash(do [ -f \"$f\" ])",
+      "Bash(echo:*)",
+      "Bash(test:*)",
+      "Bash(grep:*)",
+      "Bash(rm:*)"
+    ]
+  }
+}

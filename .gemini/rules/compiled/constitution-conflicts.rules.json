@@ -1,0 +1,9 @@
+{
+  "id": "constitution-conflicts",
+  "version": "1.0.0",
+  "domain": "constitution",
+  "applies_to": [
+    "*"
+  ],
+  "rules": []
+}

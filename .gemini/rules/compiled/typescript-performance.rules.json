@@ -1,0 +1,123 @@
+{
+  "id": "typescript-performance",
+  "version": "1.0.0",
+  "domain": "typescript",
+  "applies_to": [
+    "*.ts",
+    "*.tsx"
+  ],
+  "rules": [
+    {
+      "id": "TS-PERF-001",
+      "title": "Bundle Size Budget",
+      "severity": "critical",
+      "check": "Large features MUST be code-split.",
+      "bad_example": "import { HeavyChart } from './HeavyChart'; // Bundled in main.js",
+      "good_example": "const HeavyChart = lazy(() => import('./HeavyChart')); // Separate chunk"
+    },
+    {
+      "id": "TS-PERF-002",
+      "title": "Tree Shaking",
+      "severity": "major",
+      "check": "Avoid \"Barrel Files\" (index.ts) that re-export everything if they break tree-shaking.",
+      "bad_example": "export * from './components'; // Imports EVERYTHING",
+      "good_example": "export { Button } from './Button'; // Named export"
+    },
+    {
+      "id": "TS-PERF-003",
+      "title": "Lazy Loading",
+      "severity": "major",
+      "check": "Routes MUST be Lazy Loaded.",
+      "bad_example": "<Route path=\"/admin\" component={AdminPanel} />",
+      "good_example": "<Route path=\"/admin\" component={lazy(() => import('./AdminPanel'))} />"
+    },
+    {
+      "id": "TS-PERF-004",
+      "title": "Memoization",
+      "severity": "minor",
+      "check": "Memoize expensive computations (useMemo).",
+      "bad_example": "const sorted = items.sort(); // Runs on every render!",
+      "good_example": "const sorted = useMemo(() => items.sort(), [items]);"
+    },
+    {
+      "id": "TS-PERF-005",
+      "title": "Virtual Lists",
+      "severity": "major",
+      "check": "Lists > 100 items MUST be virtualized.",
+      "bad_example": "items.map(i => <Item data={i} />) // 1000s of DOM nodes",
+      "good_example": "<VirtualList items={items} renderItem={...} /> // Only renders visible"
+    },
+    {
+      "id": "TS-PERF-006",
+      "title": "Debounce and Throttle",
+      "severity": "minor",
+      "check": "Search/Scroll handlers MUST be debounced/throttled.",
+      "bad_example": "<input onChange={doSearch} /> // API call on every keystroke",
+      "good_example": "<input onChange={debounce(doSearch, 300)} />"
+    },
+    {
+      "id": "TS-PERF-007",
+      "title": "Avoid Memory Leaks",
+      "severity": "critical",
+      "check": "useEffect MUST return cleanup function.",
+      "bad_example": "useEffect(() => {\n    window.addEventListener('resize', handle);\n}); // Leaks listener",
+      "good_example": "useEffect(() => {\n    window.addEventListener('resize', handle);\n    return () => window.removeEventListener('resize', handle);\n}, []);"
+    },
+    {
+      "id": "TS-PERF-008",
+      "title": "Minimize Dependencies",
+      "severity": "minor",
+      "check": "Do not import huge libs for small tasks (e.g., Lodash).",
+      "bad_example": "import _ from 'lodash';\n_.map(arr, ...);",
+      "good_example": "arr.map(...); // Native JS is faster"
+    },
+    {
+      "id": "TS-PERF-009",
+      "title": "Image Optimization",
+      "severity": "major",
+      "check": "Images MUST be optimized (WebP/AVIF) and sized correctly.",
+      "bad_example": "<img src=\"huge-raw-photo.png\" />",
+      "good_example": "<img src=\"photo.webp\" width={800} height={600} loading=\"lazy\" />"
+    },
+    {
+      "id": "TS-PERF-010",
+      "title": "Avoid Render Blocking",
+      "severity": "critical",
+      "check": "Third-party scripts MUST be async or defer.",
+      "bad_example": "<script src=\"analytics.js\"></script> <!-- Blocks parsing -->",
+      "good_example": "<script src=\"analytics.js\" defer></script>"
+    },
+    {
+      "id": "TS-PERF-011",
+      "title": "Web Workers for Heavy Computation",
+      "severity": "major",
+      "check": "CPU-intensive operations (>50ms) MUST be offloaded to Web Workers.",
+      "bad_example": "// On main thread - blocks UI\nfunction processLargeDataset(data: number[]): number[] {\n    return data.map(x => expensiveCalculation(x)); // UI freezes\n}",
+      "good_example": "// worker.ts\nself.onmessage = (e) => {\n    const result = e.data.map(expensiveCalculation);\n    self.postMessage(result);\n};\n\n// main.ts\nconst worker = new Worker(\"worker.js\");\nworker.postMessage(data);\nworker.onmessage = (e) => setResult(e.data);"
+    },
+    {
+      "id": "TS-PERF-012",
+      "title": "Service Worker Caching",
+      "severity": "major",
+      "check": "Static assets MUST be cached via Service Worker for offline support and performance.",
+      "bad_example": "// No service worker - every page load fetches from network",
+      "good_example": "// service-worker.ts\nself.addEventListener(\"install\", (event) => {\n    event.waitUntil(\n        caches.open(\"v1\").then((cache) =>\n            cache.addAll([\"/\", \"/app.js\", \"/styles.css\"])\n        )\n    );\n});\n\nself.addEventListener(\"fetch\", (event) => {\n    event.respondWith(\n        caches.match(event.request).then((r) => r || fetch(event.request))\n    );\n});"
+    },
+    {
+      "id": "TS-PERF-013",
+      "title": "CSS-in-JS Extraction",
+      "severity": "major",
+      "check": "CSS-in-JS MUST extract static styles at build time. Runtime style generation forbidden in hot paths.",
+      "bad_example": "// Generates CSS on every render\nconst Button = styled.button`\n    background: ${props => props.primary ? \"blue\" : \"gray\"};\n`;",
+      "good_example": "// Use static extraction or CSS modules\nimport styles from \"./Button.module.css\";\n\n// Or use variants with pre-generated CSS\nconst Button = styled.button.variants({\n    primary: { background: \"blue\" },\n    secondary: { background: \"gray\" }\n});"
+    },
+    {
+      "id": "TS-PERF-014",
+      "title": "Compiler-Optimized Reactivity",
+      "severity": "info",
+      "check": "Prefer compiler-optimized reactivity (React Compiler, Solid, signals) over manual memoization.",
+      "bad_example": "// Manual memoization everywhere\nconst Component = () => {\n    const value = useMemo(() => compute(a, b), [a, b]);\n    const handler = useCallback(() => doThing(value), [value]);\n    return <Child value={value} onClick={handler} />;\n};",
+      "good_example": "// With React Compiler or signal-based framework\nconst Component = () => {\n    const value = compute(a, b); // Compiler handles memoization\n    const handler = () => doThing(value);\n    return <Child value={value} onClick={handler} />;\n};"
+    }
+  ]
+}

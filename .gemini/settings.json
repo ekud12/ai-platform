@@ -1,0 +1,60 @@
+{
+	"context": {
+		"fileFiltering": {
+			"respectGitIgnore": true,
+			"enableRecursiveFileSearch": true
+		},
+		"fileName": ["GEMINI.md"]
+	},
+	"general": {
+		"checkpointing": {
+			"enabled": true
+		}
+	},
+	"tools": {
+		"sandbox": false
+	},
+	"commandAliases": {
+		"st": "git status",
+		"build": "dotnet build",
+		"test": "dotnet test",
+		"lint": "npm run lint",
+		"panic": "New-Item -Path .panic -ItemType File"
+	},
+	"hooks": {
+		"BeforeTool": [
+			{
+				"name": "before-tool",
+				"type": "command",
+				"command": "node ${workspacePath}/.gemini/hooks/before-tool.js",
+				"description": "Unified pre-tool checks (panic, branch, command, secrets)",
+				"timeout": 500
+			}
+		],
+		"BeforeAgent": [
+			{
+				"name": "before-agent",
+				"type": "command",
+				"command": "node ${workspacePath}/.gemini/hooks/before-agent.js",
+				"description": "Unified pre-agent setup (rules, constitution, sync)",
+				"timeout": 5000
+			}
+		],
+		"AfterAgent": [
+			{
+				"name": "after-agent",
+				"type": "command",
+				"command": "node ${workspacePath}/.gemini/hooks/after-agent.js",
+				"description": "Memory update (architecture map, lessons)",
+				"timeout": 5000
+			}
+		]
+	},
+	"model": {
+		"maxSessionTurns": 1000,
+		"temperature": 0.2
+	},
+	"security": {
+		"environmentVariableRedaction.enabled": true
+	}
+}

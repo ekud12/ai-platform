@@ -1,0 +1,45 @@
+{
+  "id": "dotnet-caching",
+  "version": "1.0.0",
+  "domain": "dotnet",
+  "applies_to": [
+    "*.cs",
+    "*.csx"
+  ],
+  "rules": [
+    {
+      "id": "CS-CACHE-001",
+      "title": "Hybrid L1+L2 Cache",
+      "severity": "info",
+      "check": "High-traffic applications SHOULD use hybrid caching (L1 in-memory + L2 distributed) for optimal performance.",
+      "rationale": "L1 provides sub-millisecond access for hot data. L2 provides shared state across instances. Hybrid combines both benefits."
+    },
+    {
+      "id": "CS-CACHE-002",
+      "title": "Cache in Orchestrator Layer",
+      "severity": "major",
+      "check": "Caching logic MUST be in the Orchestrator layer, not in API endpoints or repositories.",
+      "bad_example": "// In endpoint - caching scattered everywhere\napp.MapGet(\"/users/{id}\", async (int id, IFusionCache cache, IDb db) =>\n{\n    var cached = await cache.GetOrDefaultAsync<User>($\"user:{id}\");\n    if (cached != null) return Results.Ok(cached);\n\n    var user = await db.Users.FindAsync(id);\n    await cache.SetAsync($\"user:{id}\", user);\n    return Results.Ok(user);\n});",
+      "good_example": "// In orchestrator - single responsibility for caching\npublic class UserOrchestrator(IFusionCache cache, IUserClient client) : IUserOrchestrator\n{\n    public async Task<UserDto?> GetByIdAsync(int id, CancellationToken ct)\n    {\n        return await cache.GetOrSetAsync(\n            $\"users:user:{id}\",\n            async _ => await client.GetByIdAsync(id, ct),\n            ct);\n    }\n}\n\n// Endpoint is clean\napp.MapGet(\"/users/{id}\", async (int id, IUserOrchestrator orchestrator, CancellationToken ct) =>\n{\n    var user = await orchestrator.GetByIdAsync(id, ct);\n    return user is null ? Results.NotFound() : Results.Ok(user);\n});",
+      "rationale": "Centralizing cache logic in orchestrators ensures consistent caching behavior and simplifies cache invalidation."
+    },
+    {
+      "id": "CS-CACHE-003",
+      "title": "Cache Key Naming Convention",
+      "severity": "major",
+      "check": "Cache keys MUST follow {domain}:{entity}:{identifier} pattern.",
+      "bad_example": "await cache.GetAsync($\"u_{id}\");\nawait cache.GetAsync($\"GetUserById_{id}\");\nawait cache.GetAsync($\"user-{id}-data\");",
+      "good_example": "await cache.GetAsync($\"users:user:{id}\");\nawait cache.GetAsync($\"content:page:{slug}:{culture}\");\nawait cache.GetAsync($\"search:results:{queryHash}\");\n\n// With static class for consistency\npublic static class CacheKeys\n{\n    public static string User(int id) => $\"users:user:{id}\";\n    public static string Page(string slug, string culture) => $\"content:page:{slug}:{culture}\";\n}",
+      "rationale": "Consistent naming enables wildcard invalidation, debugging, and monitoring."
+    },
+    {
+      "id": "CS-CACHE-004",
+      "title": "Fail-Safe Caching",
+      "severity": "major",
+      "check": "Distributed cache MUST have fail-safe enabled to serve stale data on backend failures.",
+      "bad_example": "// No fail-safe - throws when Redis/backend is down\nvar data = await cache.GetOrSetAsync(key, async _ =>\n{\n    return await _api.GetDataAsync(); // If API is down, request fails\n});",
+      "good_example": "var options = new FusionCacheEntryOptions\n{\n    Duration = TimeSpan.FromMinutes(5),\n    IsFailSafeEnabled = true,\n    FailSafeMaxDuration = TimeSpan.FromHours(2),\n    FailSafeThrottleDuration = TimeSpan.FromSeconds(30)\n};\n\nvar data = await cache.GetOrSetAsync(key, async _ =>\n{\n    return await _api.GetDataAsync();\n}, options);\n// If API is down, returns stale cached data instead of failing",
+      "rationale": "When the data source is unavailable, serving stale cached data is better than returning errors."
+    }
+  ]
+}

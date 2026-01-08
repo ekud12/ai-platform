@@ -1,0 +1,118 @@
+{
+  "id": "dotnet-security",
+  "version": "1.0.0",
+  "domain": "dotnet",
+  "applies_to": [
+    "*.cs",
+    "*.csx"
+  ],
+  "rules": [
+    {
+      "id": "CS-SEC-001",
+      "title": "SQL Injection Prevention",
+      "severity": "critical",
+      "check": "NEVER concatenate strings into SQL queries. MUST use parameterized queries or EF Core LINQ methods.",
+      "bad_example": "var query = \"SELECT * FROM Users WHERE Name = '\" + name + \"'\";\n// Attacker sends: \"' OR '1'='1\"",
+      "good_example": "// EF Core\nvar user = await _context.Users.Where(u => u.Name == name).FirstOrDefaultAsync();\n\n// Dapper\nvar user = await connection.QuerySingleAsync<User>(\n    \"SELECT * FROM Users WHERE Name = @Name\", \n    new { Name = name }\n);"
+    },
+    {
+      "id": "CS-SEC-002",
+      "title": "No Hardcoded Secrets",
+      "severity": "critical",
+      "check": "NEVER commit API keys, connection strings, or passwords to source control. Use IConfiguration or Key Vault.",
+      "bad_example": "private const string ApiKey = \"sk-1234567890abcdef\";",
+      "good_example": "var apiKey = _configuration[\"Integrations:Stripe:ApiKey\"];"
+    },
+    {
+      "id": "CS-SEC-003",
+      "title": "Controller Input Validation",
+      "severity": "major",
+      "check": "Public API endpoints MUST validate all inputs. Prefer FluentValidation or DataAnnotations.",
+      "bad_example": "[HttpPost]\npublic IActionResult CreateUser(UserDto dto) {\n    _db.Save(dto); // No checks!\n}",
+      "good_example": "[HttpPost]\npublic async Task<IActionResult> CreateUser(UserDto dto) {\n    if (!ModelState.IsValid) return BadRequest(ModelState);\n    // or\n    await _validator.ValidateAndThrowAsync(dto);\n    \n    await _service.CreateAsync(dto);\n    return Ok();\n}"
+    },
+    {
+      "id": "CS-SEC-004",
+      "title": "Secure Deserialization",
+      "severity": "critical",
+      "check": "Do not use BinaryFormatter or insecure serializers on untrusted data. Use System.Text.Json.",
+      "bad_example": "var obj = new BinaryFormatter().Deserialize(stream);",
+      "good_example": "var obj = await JsonSerializer.DeserializeAsync<MyType>(stream);"
+    },
+    {
+      "id": "CS-SEC-005",
+      "title": "CSRF Protection",
+      "severity": "critical",
+      "check": "Anti-forgery tokens MUST be validated on all state-changing endpoints.",
+      "bad_example": "[HttpPost]\npublic IActionResult Transfer(TransferDto dto) {\n    _service.Transfer(dto); // No CSRF protection\n}",
+      "good_example": "[HttpPost]\n[ValidateAntiForgeryToken]\npublic IActionResult Transfer(TransferDto dto) {\n    _service.Transfer(dto);\n}\n\n// Or for APIs, use SameSite cookies + custom header validation"
+    },
+    {
+      "id": "CS-SEC-006",
+      "title": "Path Traversal Prevention",
+      "severity": "critical",
+      "check": "File paths from user input MUST be sanitized. Path.Combine with user input is dangerous.",
+      "bad_example": "var path = Path.Combine(_uploadDir, userFileName);\n// User sends \"../../../etc/passwd\"",
+      "good_example": "var safeName = Path.GetFileName(userFileName); // Strips directory components\nvar path = Path.Combine(_uploadDir, safeName);\n\n// Verify the resolved path is within allowed directory\nvar fullPath = Path.GetFullPath(path);\nif (!fullPath.StartsWith(_uploadDir)) throw new SecurityException();"
+    },
+    {
+      "id": "CS-SEC-007",
+      "title": "Cryptography Standards",
+      "severity": "critical",
+      "check": "Use secure cryptographic primitives. MD5/SHA1 are forbidden for security purposes. Use RandomNumberGenerator not Random.",
+      "bad_example": "var random = new Random();\nvar token = random.Next().ToString(); // Predictable!\n\nvar hash = MD5.HashData(data); // Broken for security",
+      "good_example": "var token = Convert.ToBase64String(RandomNumberGenerator.GetBytes(32));\n\nvar hash = SHA256.HashData(data); // Or SHA384/SHA512"
+    },
+    {
+      "id": "CS-SEC-008",
+      "title": "Authorization on Endpoints",
+      "severity": "critical",
+      "check": "All endpoints MUST have explicit authorization attributes. Implicit allow is forbidden.",
+      "bad_example": "[ApiController]\npublic class AdminController : ControllerBase {\n    [HttpGet] // No authorization - anyone can access!\n    public IActionResult GetSecrets() { ... }\n}",
+      "good_example": "[ApiController]\n[Authorize(Policy = \"AdminOnly\")]\npublic class AdminController : ControllerBase {\n    [HttpGet]\n    public IActionResult GetSecrets() { ... }\n\n    [AllowAnonymous] // Explicit when public\n    [HttpGet(\"health\")]\n    public IActionResult Health() { ... }\n}"
+    },
+    {
+      "id": "CS-SEC-009",
+      "title": "Security Headers",
+      "severity": "major",
+      "check": "Responses MUST include security headers to prevent common attacks.",
+      "bad_example": "// No security headers configured\napp.MapGet(\"/\", () => \"Hello\");",
+      "good_example": "app.Use(async (context, next) => {\n    context.Response.Headers.Add(\"X-Content-Type-Options\", \"nosniff\");\n    context.Response.Headers.Add(\"X-Frame-Options\", \"DENY\");\n    context.Response.Headers.Add(\"X-XSS-Protection\", \"1; mode=block\");\n    context.Response.Headers.Add(\"Referrer-Policy\", \"strict-origin-when-cross-origin\");\n    await next();\n});\n\n// Or use NWebsec middleware"
+    },
+    {
+      "id": "CS-SEC-010",
+      "title": "CORS Configuration",
+      "severity": "critical",
+      "check": "CORS policies MUST be explicit. AllowAnyOrigin with credentials is forbidden.",
+      "bad_example": "builder.Services.AddCors(o => o.AddPolicy(\"Bad\", p =>\n    p.AllowAnyOrigin()\n     .AllowAnyHeader()\n     .AllowCredentials())); // Security vulnerability!",
+      "good_example": "builder.Services.AddCors(o => o.AddPolicy(\"Strict\", p =>\n    p.WithOrigins(\"https://app.example.com\")\n     .WithMethods(\"GET\", \"POST\")\n     .WithHeaders(\"Content-Type\", \"Authorization\")\n     .AllowCredentials()));"
+    },
+    {
+      "id": "CS-SEC-011",
+      "title": "Options Pattern Validation",
+      "severity": "critical",
+      "check": "Configuration options MUST use ValidateDataAnnotations() and ValidateOnStart().",
+      "bad_example": "services.Configure<ApiOptions>(config.GetSection(\"Api\"));\n// Invalid config causes runtime errors",
+      "good_example": "services.AddOptions<ApiOptions>()\n    .Bind(config.GetSection(\"Api\"))\n    .ValidateDataAnnotations()\n    .ValidateOnStart();\n\npublic class ApiOptions\n{\n    [Required]\n    public required string BaseUrl { get; init; }\n\n    [Range(1, 300)]\n    public int TimeoutSeconds { get; init; } = 30;\n}",
+      "rationale": "Fail-fast on startup prevents runtime errors from missing or invalid configuration."
+    },
+    {
+      "id": "CS-SEC-012",
+      "title": "Environment Variables for Secrets",
+      "severity": "critical",
+      "check": "Secrets in Docker environments MUST use environment variables, NOT appsettings files.",
+      "bad_example": "COPY appsettings.Production.json /app/\n# Secrets baked into image",
+      "good_example": "# docker-compose.yml\nservices:\n  api:\n    environment:\n      - ConnectionStrings__Database=${DB_CONNECTION_STRING}\n      - Api__ApiKey=${API_KEY}",
+      "rationale": "Environment variables are injected at runtime and don't persist in images or source control."
+    },
+    {
+      "id": "CS-SEC-013",
+      "title": "Refit Client Security",
+      "severity": "major",
+      "check": "Refit clients MUST configure authentication headers via DelegatingHandler, NOT inline.",
+      "bad_example": "public interface IExternalApi\n{\n    [Headers(\"Authorization: Bearer hardcoded-token\")]\n    [Get(\"/data\")]\n    Task<Data> GetDataAsync();\n}",
+      "good_example": "public interface IExternalApi\n{\n    [Get(\"/data\")]\n    Task<Data> GetDataAsync(CancellationToken ct = default);\n}\n\npublic class AuthHandler(ITokenProvider tokens) : DelegatingHandler\n{\n    protected override async Task<HttpResponseMessage> SendAsync(\n        HttpRequestMessage request,\n        CancellationToken ct)\n    {\n        var token = await tokens.GetTokenAsync(ct);\n        request.Headers.Authorization = new AuthenticationHeaderValue(\"Bearer\", token);\n        return await base.SendAsync(request, ct);\n    }\n}\n\n// Registration\nservices.AddRefitClient<IExternalApi>()\n    .ConfigureHttpClient(c => c.BaseAddress = new Uri(options.BaseUrl))\n    .AddHttpMessageHandler<AuthHandler>();",
+      "rationale": "Centralized auth handling ensures consistent security and enables token refresh logic."
+    }
+  ]
+}

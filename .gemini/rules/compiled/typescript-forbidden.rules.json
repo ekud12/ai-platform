@@ -1,0 +1,95 @@
+{
+  "id": "typescript-forbidden",
+  "version": "1.0.0",
+  "domain": "typescript",
+  "applies_to": [
+    "*.ts",
+    "*.tsx"
+  ],
+  "rules": [
+    {
+      "id": "TS-FORBID-001",
+      "title": "No Implicit Any",
+      "severity": "info",
+      "check": "Implicit any from missing type annotations is forbidden.",
+      "rationale": "Implicit any silently disables type checking. It creates type-unsafe code without explicit acknowledgment."
+    },
+    {
+      "id": "TS-FORBID-002",
+      "title": "No Non-Null Assertions",
+      "severity": "info",
+      "check": "Non-null assertions (! operator) are forbidden except in tests.",
+      "rationale": "Non-null assertions bypass null checks. They can cause runtime errors that TypeScript should prevent."
+    },
+    {
+      "id": "TS-FORBID-003",
+      "title": "No ts-ignore",
+      "severity": "info",
+      "check": "@ts-ignore comments are forbidden. Use @ts-expect-error with explanation if suppression is necessary.",
+      "rationale": "ts-ignore silently suppresses all errors. ts-expect-error fails if the error disappears, ensuring intentionality."
+    },
+    {
+      "id": "TS-FORBID-004",
+      "title": "No Namespace",
+      "severity": "info",
+      "check": "TypeScript namespaces are forbidden. Use ES modules.",
+      "rationale": "Namespaces are a legacy pattern. ES modules are the standard for code organization."
+    },
+    {
+      "id": "TS-FORBID-005",
+      "title": "No Enums",
+      "severity": "info",
+      "check": "TypeScript enums are forbidden. Use const objects with as const.",
+      "rationale": "Enums have unexpected runtime behavior and type issues. Const objects are simpler and more predictable."
+    },
+    {
+      "id": "TS-FORBID-006",
+      "title": "No Boolean Trap",
+      "severity": "info",
+      "check": "Functions with multiple boolean parameters are forbidden.",
+      "rationale": "Boolean parameters are unclear at call sites. Object parameters with named properties are self-documenting."
+    },
+    {
+      "id": "TS-FORBID-007",
+      "title": "No Default Export",
+      "severity": "info",
+      "check": "Default exports are forbidden. Use named exports only.",
+      "rationale": "Default exports break refactoring and import consistency. Named exports ensure the same name is used everywhere."
+    },
+    {
+      "id": "TS-FORBID-008",
+      "title": "No Class Properties Without Modifier",
+      "severity": "info",
+      "check": "Class properties must have explicit access modifiers (public, private, protected).",
+      "rationale": "Implicit public is unclear. Explicit modifiers document intent and encapsulation."
+    },
+    {
+      "id": "TS-FORBID-009",
+      "title": "No Require",
+      "severity": "info",
+      "check": "require() is forbidden. Use ES import syntax.",
+      "rationale": "Require is CommonJS syntax incompatible with tree shaking. ES imports enable static analysis."
+    },
+    {
+      "id": "TS-FORBID-010",
+      "title": "No Object Mutation",
+      "severity": "info",
+      "check": "Object mutation in shared state is forbidden. Use immutable update patterns.",
+      "rationale": "Mutation creates bugs in React, Redux, and concurrent code. Immutable updates are predictable and traceable."
+    },
+    {
+      "id": "TS-FORBID-011",
+      "title": "No Prototype Modification",
+      "severity": "info",
+      "check": "Modifying built-in prototypes (Array.prototype, String.prototype, etc.) is forbidden.",
+      "rationale": "Prototype pollution affects all code including third-party libraries. It causes unpredictable behavior and security issues."
+    },
+    {
+      "id": "TS-FORBID-012",
+      "title": "No Nested Ternaries",
+      "severity": "info",
+      "check": "Nested ternary operators are forbidden. Use if/else or switch statements.",
+      "rationale": "Nested ternaries are difficult to read and maintain. They obscure logic flow and are prone to errors."
+    }
+  ]
+}

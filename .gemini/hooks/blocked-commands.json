@@ -1,0 +1,503 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "version": "1.0",
+  "description": "Command sandbox configuration for Gemini CLI",
+
+  "blocked_patterns": [
+    {
+      "pattern": "rm\\s+(-[rRf]+\\s+|.*-[rRf]+)",
+      "reason": "Recursive/force delete forbidden",
+      "severity": "critical"
+    },
+    {
+      "pattern": "rmdir\\s+/[sS]",
+      "reason": "Recursive directory delete forbidden",
+      "severity": "critical"
+    },
+    {
+      "pattern": "del\\s+/[sSfF]",
+      "reason": "Recursive/force delete forbidden",
+      "severity": "critical"
+    },
+    {
+      "pattern": "Remove-Item.*-Recurse",
+      "reason": "Recursive delete forbidden",
+      "severity": "critical"
+    },
+    {
+      "pattern": "sudo\\s+",
+      "reason": "Elevated privileges forbidden",
+      "severity": "critical"
+    },
+    {
+      "pattern": "runas\\s+",
+      "reason": "Elevated privileges forbidden",
+      "severity": "critical"
+    },
+    {
+      "pattern": "Start-Process.*-Verb\\s+RunAs",
+      "reason": "Elevated privileges forbidden",
+      "severity": "critical"
+    },
+    {
+      "pattern": "chmod\\s+",
+      "reason": "Permission changes forbidden",
+      "severity": "high"
+    },
+    {
+      "pattern": "chown\\s+",
+      "reason": "Ownership changes forbidden",
+      "severity": "high"
+    },
+    {
+      "pattern": "icacls\\s+",
+      "reason": "Permission changes forbidden",
+      "severity": "high"
+    },
+    {
+      "pattern": "git\\s+push",
+      "reason": "Push requires manual execution",
+      "severity": "high"
+    },
+    {
+      "pattern": "git\\s+commit",
+      "reason": "Commit requires manual execution",
+      "severity": "high"
+    },
+    {
+      "pattern": "git\\s+reset\\s+--hard",
+      "reason": "Hard reset forbidden - data loss risk",
+      "severity": "critical"
+    },
+    {
+      "pattern": "git\\s+clean\\s+-[fdx]+",
+      "reason": "Git clean forbidden - data loss risk",
+      "severity": "critical"
+    },
+    {
+      "pattern": "git\\s+checkout\\s+\\.",
+      "reason": "Discard all changes forbidden",
+      "severity": "high"
+    },
+    {
+      "pattern": "git\\s+stash\\s+(drop|clear)",
+      "reason": "Stash deletion forbidden",
+      "severity": "high"
+    },
+    {
+      "pattern": "git\\s+rebase",
+      "reason": "Rebase requires manual execution",
+      "severity": "medium"
+    },
+    {
+      "pattern": "git\\s+merge",
+      "reason": "Merge requires manual execution",
+      "severity": "medium"
+    },
+    {
+      "pattern": "git\\s+branch\\s+-[dD]",
+      "reason": "Branch deletion requires manual execution",
+      "severity": "medium"
+    },
+    {
+      "pattern": "git\\s+tag\\s+-d",
+      "reason": "Tag deletion requires manual execution",
+      "severity": "medium"
+    },
+    {
+      "pattern": "git\\s+remote\\s+(add|remove|set-url)",
+      "reason": "Remote modification forbidden",
+      "severity": "high"
+    },
+    {
+      "pattern": "git\\s+config\\s+--global",
+      "reason": "Global git config changes forbidden",
+      "severity": "high"
+    },
+    {
+      "pattern": "aws\\s+",
+      "reason": "AWS CLI forbidden - use console",
+      "severity": "critical"
+    },
+    {
+      "pattern": "az\\s+",
+      "reason": "Azure CLI forbidden - use console",
+      "severity": "critical"
+    },
+    {
+      "pattern": "gcloud\\s+",
+      "reason": "GCloud CLI forbidden - use console",
+      "severity": "critical"
+    },
+    {
+      "pattern": "kubectl\\s+(delete|apply|create|patch)",
+      "reason": "Kubernetes mutations forbidden",
+      "severity": "critical"
+    },
+    {
+      "pattern": "docker\\s+(rm|rmi|system\\s+prune|volume\\s+rm)",
+      "reason": "Docker destructive operations forbidden",
+      "severity": "high"
+    },
+    {
+      "pattern": "npm\\s+publish",
+      "reason": "Package publishing forbidden",
+      "severity": "critical"
+    },
+    {
+      "pattern": "dotnet\\s+nuget\\s+push",
+      "reason": "Package publishing forbidden",
+      "severity": "critical"
+    },
+    {
+      "pattern": "curl\\s+.*\\|\\s*(ba)?sh",
+      "reason": "Piping to shell forbidden",
+      "severity": "critical"
+    },
+    {
+      "pattern": "wget\\s+.*\\|\\s*(ba)?sh",
+      "reason": "Piping to shell forbidden",
+      "severity": "critical"
+    },
+    {
+      "pattern": "Invoke-WebRequest.*\\|.*Invoke-Expression",
+      "reason": "Remote code execution forbidden",
+      "severity": "critical"
+    },
+    {
+      "pattern": "iex\\s*\\(",
+      "reason": "Invoke-Expression forbidden",
+      "severity": "critical"
+    },
+    {
+      "pattern": "Invoke-Expression",
+      "reason": "Invoke-Expression forbidden",
+      "severity": "critical"
+    },
+    {
+      "pattern": ">\\s*(/etc/|C:\\\\Windows)",
+      "reason": "System file writes forbidden",
+      "severity": "critical"
+    },
+    {
+      "pattern": "mkfs",
+      "reason": "Filesystem creation forbidden",
+      "severity": "critical"
+    },
+    {
+      "pattern": "dd\\s+if=",
+      "reason": "Low-level disk operations forbidden",
+      "severity": "critical"
+    },
+    {
+      "pattern": "format\\s+[a-zA-Z]:",
+      "reason": "Drive formatting forbidden",
+      "severity": "critical"
+    },
+    {
+      "pattern": "diskpart",
+      "reason": "Disk partitioning forbidden",
+      "severity": "critical"
+    },
+    {
+      "pattern": "reg\\s+(add|delete)",
+      "reason": "Registry modification forbidden",
+      "severity": "critical"
+    },
+    {
+      "pattern": "Set-ItemProperty.*HKLM:",
+      "reason": "Registry modification forbidden",
+      "severity": "critical"
+    },
+    {
+      "pattern": "ssh\\s+",
+      "reason": "SSH requires manual execution",
+      "severity": "medium"
+    },
+    {
+      "pattern": "scp\\s+",
+      "reason": "SCP requires manual execution",
+      "severity": "medium"
+    },
+    {
+      "pattern": "ftp\\s+",
+      "reason": "FTP requires manual execution",
+      "severity": "medium"
+    }
+  ],
+
+  "allowed_patterns": [
+    {
+      "pattern": "^git\\s+status",
+      "reason": "Read-only git operation"
+    },
+    {
+      "pattern": "^git\\s+diff",
+      "reason": "Read-only git operation"
+    },
+    {
+      "pattern": "^git\\s+log",
+      "reason": "Read-only git operation"
+    },
+    {
+      "pattern": "^git\\s+show",
+      "reason": "Read-only git operation"
+    },
+    {
+      "pattern": "^git\\s+blame",
+      "reason": "Read-only git operation"
+    },
+    {
+      "pattern": "^git\\s+branch\\s*$",
+      "reason": "List branches (read-only)"
+    },
+    {
+      "pattern": "^git\\s+branch\\s+-[avrl]+",
+      "reason": "List branches (read-only)"
+    },
+    {
+      "pattern": "^git\\s+remote\\s*$",
+      "reason": "List remotes (read-only)"
+    },
+    {
+      "pattern": "^git\\s+remote\\s+-v",
+      "reason": "List remotes (read-only)"
+    },
+    {
+      "pattern": "^git\\s+stash\\s+list",
+      "reason": "List stashes (read-only)"
+    },
+    {
+      "pattern": "^git\\s+tag\\s*$",
+      "reason": "List tags (read-only)"
+    },
+    {
+      "pattern": "^git\\s+tag\\s+-l",
+      "reason": "List tags (read-only)"
+    },
+    {
+      "pattern": "^ls\\s*",
+      "reason": "List directory contents"
+    },
+    {
+      "pattern": "^dir\\s*",
+      "reason": "List directory contents"
+    },
+    {
+      "pattern": "^Get-ChildItem",
+      "reason": "List directory contents"
+    },
+    {
+      "pattern": "^cat\\s+",
+      "reason": "Read file contents"
+    },
+    {
+      "pattern": "^type\\s+",
+      "reason": "Read file contents"
+    },
+    {
+      "pattern": "^Get-Content",
+      "reason": "Read file contents"
+    },
+    {
+      "pattern": "^head\\s+",
+      "reason": "Read file contents"
+    },
+    {
+      "pattern": "^tail\\s+",
+      "reason": "Read file contents"
+    },
+    {
+      "pattern": "^grep\\s+",
+      "reason": "Search file contents"
+    },
+    {
+      "pattern": "^Select-String",
+      "reason": "Search file contents"
+    },
+    {
+      "pattern": "^find\\s+",
+      "reason": "Find files"
+    },
+    {
+      "pattern": "^tree\\s*",
+      "reason": "Display directory tree"
+    },
+    {
+      "pattern": "^dotnet\\s+build",
+      "reason": "Build .NET project"
+    },
+    {
+      "pattern": "^dotnet\\s+test",
+      "reason": "Run .NET tests"
+    },
+    {
+      "pattern": "^dotnet\\s+run",
+      "reason": "Run .NET project"
+    },
+    {
+      "pattern": "^dotnet\\s+restore",
+      "reason": "Restore .NET packages"
+    },
+    {
+      "pattern": "^dotnet\\s+clean",
+      "reason": "Clean .NET build artifacts"
+    },
+    {
+      "pattern": "^dotnet\\s+--version",
+      "reason": "Check .NET version"
+    },
+    {
+      "pattern": "^dotnet\\s+--list-sdks",
+      "reason": "List .NET SDKs"
+    },
+    {
+      "pattern": "^npm\\s+test",
+      "reason": "Run npm tests"
+    },
+    {
+      "pattern": "^npm\\s+run\\s+",
+      "reason": "Run npm scripts"
+    },
+    {
+      "pattern": "^npm\\s+ci\\s*$",
+      "reason": "Clean install npm packages"
+    },
+    {
+      "pattern": "^npm\\s+ls",
+      "reason": "List npm packages"
+    },
+    {
+      "pattern": "^npm\\s+--version",
+      "reason": "Check npm version"
+    },
+    {
+      "pattern": "^node\\s+",
+      "reason": "Run Node.js"
+    },
+    {
+      "pattern": "^python\\s+",
+      "reason": "Run Python"
+    },
+    {
+      "pattern": "^python3\\s+",
+      "reason": "Run Python"
+    },
+    {
+      "pattern": "^pwsh\\s+",
+      "reason": "Run PowerShell"
+    },
+    {
+      "pattern": "^echo\\s+",
+      "reason": "Print output"
+    },
+    {
+      "pattern": "^Write-Output",
+      "reason": "Print output"
+    },
+    {
+      "pattern": "^Write-Host",
+      "reason": "Print output"
+    },
+    {
+      "pattern": "^mkdir\\s+",
+      "reason": "Create directory"
+    },
+    {
+      "pattern": "^New-Item.*-ItemType\\s+Directory",
+      "reason": "Create directory"
+    },
+    {
+      "pattern": "^code\\s+",
+      "reason": "Open in VS Code"
+    },
+    {
+      "pattern": "^which\\s+",
+      "reason": "Find command location"
+    },
+    {
+      "pattern": "^where\\s+",
+      "reason": "Find command location"
+    },
+    {
+      "pattern": "^where.exe\\s+",
+      "reason": "Find command location"
+    },
+    {
+      "pattern": "^Get-Command",
+      "reason": "Find command location"
+    },
+    {
+      "pattern": "^env\\s*$",
+      "reason": "List environment variables"
+    },
+    {
+      "pattern": "^printenv",
+      "reason": "List environment variables"
+    },
+    {
+      "pattern": "^Get-Process",
+      "reason": "List processes"
+    },
+    {
+      "pattern": "^hostname",
+      "reason": "Show hostname"
+    },
+    {
+      "pattern": "^whoami",
+      "reason": "Show current user"
+    },
+    {
+      "pattern": "^pwd\\s*$",
+      "reason": "Print working directory"
+    },
+    {
+      "pattern": "^Get-Location",
+      "reason": "Print working directory"
+    },
+    {
+      "pattern": "^date\\s*$",
+      "reason": "Show current date"
+    },
+    {
+      "pattern": "^Get-Date",
+      "reason": "Show current date"
+    },
+    {
+      "pattern": "^kubectl\\s+get",
+      "reason": "Read-only Kubernetes operation"
+    },
+    {
+      "pattern": "^kubectl\\s+describe",
+      "reason": "Read-only Kubernetes operation"
+    },
+    {
+      "pattern": "^kubectl\\s+logs",
+      "reason": "Read-only Kubernetes operation"
+    },
+    {
+      "pattern": "^docker\\s+ps",
+      "reason": "List Docker containers"
+    },
+    {
+      "pattern": "^docker\\s+images",
+      "reason": "List Docker images"
+    },
+    {
+      "pattern": "^docker\\s+logs",
+      "reason": "View Docker logs"
+    },
+    {
+      "pattern": "^docker\\s+inspect",
+      "reason": "Inspect Docker objects"
+    }
+  ],
+
+  "default_action": "ask",
+
+  "settings": {
+    "log_blocked_commands": true,
+    "log_file": ".gemini/logs/blocked-commands.log",
+    "strict_mode": false
+  }
+}

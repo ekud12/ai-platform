@@ -1,0 +1,119 @@
+{
+  "id": "dotnet-observability",
+  "version": "1.0.0",
+  "domain": "dotnet",
+  "applies_to": [
+    "*.cs",
+    "*.csx"
+  ],
+  "rules": [
+    {
+      "id": "CS-OBS-001",
+      "title": "Structured Logging",
+      "severity": "info",
+      "check": "All logging must use structured logging with named parameters.",
+      "rationale": "Structured logs enable searching, filtering, and aggregation. They are machine-parseable and human-readable."
+    },
+    {
+      "id": "CS-OBS-002",
+      "title": "Log Levels",
+      "severity": "info",
+      "check": "Log levels must be used consistently: Debug for development, Information for flow, Warning for recoverable issues, Error for failures.",
+      "rationale": "Consistent levels enable filtering and alerting. Misused levels create noise or miss important events."
+    },
+    {
+      "id": "CS-OBS-003",
+      "title": "Correlation IDs",
+      "severity": "info",
+      "check": "All operations must have correlation IDs that propagate across service boundaries.",
+      "rationale": "Correlation enables tracing requests through distributed systems. Without correlation, debugging distributed issues is impractical."
+    },
+    {
+      "id": "CS-OBS-004",
+      "title": "OpenTelemetry Tracing",
+      "severity": "info",
+      "check": "Services must implement distributed tracing using OpenTelemetry.",
+      "rationale": "OpenTelemetry is the standard for observability. It enables vendor-neutral tracing across services."
+    },
+    {
+      "id": "CS-OBS-005",
+      "title": "Span Attributes",
+      "severity": "info",
+      "check": "Trace spans must include relevant attributes for debugging: operation type, entity IDs, result status.",
+      "rationale": "Rich span attributes enable filtering and analysis. They provide context for understanding trace behavior."
+    },
+    {
+      "id": "CS-OBS-006",
+      "title": "Metrics Instrumentation",
+      "severity": "info",
+      "check": "Key operations must have metrics: counters for events, histograms for durations, gauges for state.",
+      "rationale": "Metrics enable alerting, capacity planning, and performance analysis. They provide quantitative system understanding."
+    },
+    {
+      "id": "CS-OBS-007",
+      "title": "Exception Logging",
+      "severity": "info",
+      "check": "Exceptions must be logged with full stack trace at Error level. Caught exceptions must be logged at Warning.",
+      "rationale": "Complete exception information is essential for debugging. The level indicates whether the exception was handled."
+    },
+    {
+      "id": "CS-OBS-008",
+      "title": "Performance Logging",
+      "severity": "info",
+      "check": "Operations exceeding performance thresholds must be logged with timing information.",
+      "rationale": "Performance anomalies must be detectable from logs. Threshold-based logging highlights issues without overwhelming logs."
+    },
+    {
+      "id": "CS-OBS-009",
+      "title": "Health Check Details",
+      "severity": "info",
+      "check": "Health checks must report detailed status for each dependency.",
+      "rationale": "Aggregated health status is insufficient for debugging. Detailed checks identify the specific failing component."
+    },
+    {
+      "id": "CS-OBS-010",
+      "title": "Log Context",
+      "severity": "info",
+      "check": "Logs must include request context: user ID (if authenticated), request path, operation name.",
+      "rationale": "Context enables filtering logs by user or operation. It provides the information needed to reproduce issues."
+    },
+    {
+      "id": "CS-OBS-011",
+      "title": "Baggage Propagation",
+      "severity": "info",
+      "check": "OpenTelemetry Baggage MUST be used for cross-service context (tenant ID, feature flags).",
+      "rationale": "Baggage propagates context across service boundaries automatically. It enables consistent behavior in distributed systems."
+    },
+    {
+      "id": "CS-OBS-012",
+      "title": "Metric Naming Convention",
+      "severity": "info",
+      "check": "Metrics MUST follow naming convention: {service}.{subsystem}.{metric} with units.",
+      "rationale": "Consistent naming enables dashboard templates and alerting rules. Units in names prevent interpretation errors."
+    },
+    {
+      "id": "CS-OBS-013",
+      "title": "HTTP Handler Correlation",
+      "severity": "info",
+      "check": "All outgoing HTTP requests MUST include correlation headers via DelegatingHandler.",
+      "good_example": "public class RequestCorrelationHandler : DelegatingHandler\n{\n    protected override async Task<HttpResponseMessage> SendAsync(\n        HttpRequestMessage request,\n        CancellationToken ct)\n    {\n        var activity = Activity.Current;\n        if (activity != null)\n        {\n            request.Headers.TryAddWithoutValidation(\"X-Correlation-Id\", activity.TraceId.ToString());\n            request.Headers.TryAddWithoutValidation(\"X-Span-Id\", activity.SpanId.ToString());\n        }\n        return await base.SendAsync(request, ct);\n    }\n}\n\n// Registration\nservices.AddTransient<RequestCorrelationHandler>();\nservices.AddHttpClient<IMyClient, MyClient>()\n    .AddHttpMessageHandler<RequestCorrelationHandler>();",
+      "rationale": "Correlation headers enable distributed tracing across service boundaries."
+    },
+    {
+      "id": "CS-OBS-014",
+      "title": "HTTP Request/Response Logging",
+      "severity": "info",
+      "check": "HTTP clients SHOULD log requests and responses via a logging handler for debugging.",
+      "good_example": "public class HttpLoggingHandler(ILogger<HttpLoggingHandler> logger) : DelegatingHandler\n{\n    protected override async Task<HttpResponseMessage> SendAsync(\n        HttpRequestMessage request,\n        CancellationToken ct)\n    {\n        logger.LogDebug(\"HTTP {Method} {Uri}\",\n            request.Method, request.RequestUri);\n\n        var stopwatch = Stopwatch.StartNew();\n        var response = await base.SendAsync(request, ct);\n        stopwatch.Stop();\n\n        logger.LogDebug(\"HTTP {StatusCode} {Uri} ({ElapsedMs}ms)\",\n            (int)response.StatusCode, request.RequestUri, stopwatch.ElapsedMilliseconds);\n\n        return response;\n    }\n}",
+      "rationale": "HTTP logging aids debugging integration issues without requiring external tools."
+    },
+    {
+      "id": "CS-OBS-015",
+      "title": "Liveness Health Check Per Service",
+      "severity": "info",
+      "check": "Each service MUST have a dedicated liveness health check class.",
+      "good_example": "// HealthChecks/LivenessCheck.cs\npublic class LivenessCheck : IHealthCheck\n{\n    public Task<HealthCheckResult> CheckHealthAsync(\n        HealthCheckContext context,\n        CancellationToken ct = default)\n    {\n        // Add actual liveness verification logic\n        return Task.FromResult(HealthCheckResult.Healthy(\"Service is alive\"));\n    }\n}\n\n// Registration\nservices.AddHealthChecks()\n    .AddCheck<LivenessCheck>(\"liveness\", tags: [\"live\"])\n    .AddSqlServer(connectionString, tags: [\"ready\"])\n    .AddRedis(redisConnection, tags: [\"ready\"]);\n\n// Endpoints\napp.MapHealthChecks(\"/health/live\", new HealthCheckOptions\n{\n    Predicate = check => check.Tags.Contains(\"live\")\n});\n\napp.MapHealthChecks(\"/health/ready\", new HealthCheckOptions\n{\n    Predicate = check => check.Tags.Contains(\"ready\")\n});",
+      "rationale": "Liveness checks enable Kubernetes to detect hung processes. Each service should verify its critical dependencies."
+    }
+  ]
+}

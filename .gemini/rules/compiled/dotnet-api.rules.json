@@ -1,0 +1,171 @@
+{
+  "id": "dotnet-api",
+  "version": "1.0.0",
+  "domain": "dotnet",
+  "applies_to": [
+    "*.cs",
+    "*.csx"
+  ],
+  "rules": [
+    {
+      "id": "CS-API-001",
+      "title": "Minimal API Pattern",
+      "severity": "info",
+      "check": "New endpoints SHOULD use Minimal APIs (app.MapGet) over Controllers.",
+      "bad_example": "public class UserController : ControllerBase { ... }",
+      "good_example": "app.MapGet(\"/users\", async (UserDb db) => ...);"
+    },
+    {
+      "id": "CS-API-002",
+      "title": "ProblemDetails for Errors",
+      "severity": "critical",
+      "check": "Errors MUST return RFC 9457 ProblemDetails.",
+      "bad_example": "return BadRequest(\"Something went wrong\");",
+      "good_example": "return Results.Problem(detail: \"User not found\", statusCode: 404);"
+    },
+    {
+      "id": "CS-API-003",
+      "title": "OpenAPI Documentation",
+      "severity": "major",
+      "check": "All endpoints MUST produce OpenAPI/Swagger documentation.",
+      "bad_example": "app.MapGet(\"/data\", () => \"data\"); // No metadata",
+      "good_example": "app.MapGet(\"/data\", () => \"data\")\n   .WithOpenApi()\n   .Produces<string>(200);"
+    },
+    {
+      "id": "CS-API-004",
+      "title": "Request Validation",
+      "severity": "critical",
+      "check": "Inputs MUST be validated (FluentValidation or DataAnnotations).",
+      "bad_example": "app.MapPost(\"/users\", (UserDto u) => db.Save(u));",
+      "good_example": "app.MapPost(\"/users\", async (IValidator<UserDto> v, UserDto u) => {\n    var result = await v.ValidateAsync(u);\n    if(!result.IsValid) return Results.ValidationProblem(result.ToDictionary());\n    ...\n});"
+    },
+    {
+      "id": "CS-API-005",
+      "title": "Response Typing",
+      "severity": "major",
+      "check": "Endpoints MUST use explicit TypedResults or return types.",
+      "bad_example": "public async Task<IActionResult> Get() { ... } // Unknown return shape",
+      "good_example": "public async Task<Results<Ok<User>, NotFound>> Get() { ... }"
+    },
+    {
+      "id": "CS-API-006",
+      "title": "Versioning Strategy",
+      "severity": "critical",
+      "check": "APIs MUST be versioned (URL or Header).",
+      "bad_example": "app.MapGet(\"/api/users\", ...);",
+      "good_example": "var v1 = app.NewVersionedApi(\"1.0\");\nv1.MapGet(\"/api/v1/users\", ...);"
+    },
+    {
+      "id": "CS-API-007",
+      "title": "Idempotency",
+      "severity": "minor",
+      "check": "Critical mutations (POST/PUT) SHOULD support Idempotency Keys.",
+      "bad_example": "// Charge logic that runs twice if network fails",
+      "good_example": "// Middleware checks \"Idempotency-Key\" header before executing"
+    },
+    {
+      "id": "CS-API-008",
+      "title": "Rate Limiting",
+      "severity": "critical",
+      "check": "Public APIs MUST have Rate Limiting enabled.",
+      "bad_example": "app.MapGet(\"/heavy-calculation\", ...); // Abusable",
+      "good_example": "app.MapGet(\"/heavy-calculation\", ...).RequireRateLimiting(\"fixed\");"
+    },
+    {
+      "id": "CS-API-009",
+      "title": "Pagination",
+      "severity": "critical",
+      "check": "List endpoints MUST support pagination.",
+      "bad_example": "return await db.Users.ToListAsync(); // Could return 1M rows",
+      "good_example": "return await db.Users.Skip((page-1)*size).Take(size).ToListAsync();"
+    },
+    {
+      "id": "CS-API-010",
+      "title": "Health Endpoints",
+      "severity": "critical",
+      "check": "Services MUST expose /health or /healthz.",
+      "bad_example": "// No health check configured",
+      "good_example": "app.MapHealthChecks(\"/health\");"
+    },
+    {
+      "id": "CS-API-011",
+      "title": "Response Compression",
+      "severity": "major",
+      "check": "Large responses MUST enable compression (Brotli/Gzip).",
+      "bad_example": "// No compression configured - large JSON responses sent uncompressed\napp.MapGet(\"/data\", () => GetLargeDataset());",
+      "good_example": "builder.Services.AddResponseCompression(options => {\n    options.EnableForHttps = true;\n    options.Providers.Add<BrotliCompressionProvider>();\n    options.Providers.Add<GzipCompressionProvider>();\n});\n\napp.UseResponseCompression();"
+    },
+    {
+      "id": "CS-API-012",
+      "title": "Request Size Limits",
+      "severity": "critical",
+      "check": "Endpoints MUST configure max request body size to prevent DoS attacks.",
+      "bad_example": "// Default allows very large uploads\napp.MapPost(\"/upload\", async (HttpRequest req) => {\n    var body = await req.ReadFromJsonAsync<object>();\n});",
+      "good_example": "app.MapPost(\"/upload\", async (HttpRequest req) => { ... })\n   .WithMetadata(new RequestSizeLimitAttribute(10 * 1024 * 1024)); // 10MB max\n\n// Or globally\nbuilder.WebHost.ConfigureKestrel(o => o.Limits.MaxRequestBodySize = 10_000_000);"
+    },
+    {
+      "id": "CS-API-013",
+      "title": "Cache Headers",
+      "severity": "major",
+      "check": "Cacheable responses MUST have appropriate Cache-Control headers.",
+      "bad_example": "app.MapGet(\"/static-data\", () => GetRarelyChangingData());\n// No cache headers - browsers/CDNs can't cache",
+      "good_example": "app.MapGet(\"/static-data\", () => GetRarelyChangingData())\n   .CacheOutput(p => p.Expire(TimeSpan.FromHours(1)));\n\n// Or manually\napp.MapGet(\"/static-data\", (HttpContext ctx) => {\n    ctx.Response.Headers.CacheControl = \"public, max-age=3600\";\n    return GetRarelyChangingData();\n});"
+    },
+    {
+      "id": "CS-API-014",
+      "title": "Correlation Header Propagation",
+      "severity": "major",
+      "check": "APIs MUST propagate correlation/trace headers to downstream services.",
+      "bad_example": "// Calling downstream service without propagating trace context\nvar result = await _httpClient.GetAsync(\"https://other-service/api\");",
+      "good_example": "// Configure HttpClient to propagate headers\nbuilder.Services.AddHttpClient(\"downstream\")\n    .AddHeaderPropagation();\n\nbuilder.Services.AddHeaderPropagation(options => {\n    options.Headers.Add(\"X-Correlation-Id\");\n    options.Headers.Add(\"traceparent\");\n});\n\napp.UseHeaderPropagation();"
+    },
+    {
+      "id": "CS-API-015",
+      "title": "Endpoint Extension Methods",
+      "severity": "major",
+      "check": "API endpoints MUST be defined as extension methods on IEndpointRouteBuilder in dedicated {Resource}Endpoints.cs files.",
+      "bad_example": "// Everything in Program.cs\napp.MapGet(\"/api/users/{id}\", async (int id, IUserService svc) => ...);\napp.MapPost(\"/api/users\", async (UserDto dto, IUserService svc) => ...);\napp.MapGet(\"/api/orders/{id}\", async (int id, IOrderService svc) => ...);",
+      "good_example": "// Endpoints/UserEndpoints.cs\npublic static class UserEndpoints\n{\n    public static IEndpointRouteBuilder MapUserEndpoints(this IEndpointRouteBuilder endpoints)\n    {\n        var group = endpoints.MapGroup(\"/api/users\");\n        group.MapGet(\"/{id}\", GetById);\n        group.MapPost(\"/\", Create);\n        return endpoints;\n    }\n\n    private static async Task<IResult> GetById(int id, IUserOrchestrator svc, CancellationToken ct) => ...\n}\n\n// Program.cs - clean and organized\napp.MapUserEndpoints();\napp.MapOrderEndpoints();"
+    },
+    {
+      "id": "CS-API-016",
+      "title": "Static Routes Class",
+      "severity": "major",
+      "check": "Route paths and names MUST be defined in a static Routes class, not inline strings.",
+      "bad_example": "group.MapGet(\"/api/v1/media/{id}\", GetById)\n    .WithName(\"GetMediaById\");",
+      "good_example": "public static class Routes\n{\n    public static class Groups\n    {\n        public const string V1 = \"/api/v1\";\n        public const string Media = \"/media\";\n    }\n\n    public static class Media\n    {\n        public const string ById = \"/{id}\";\n        public const string Search = \"/search\";\n\n        public static class Names\n        {\n            public const string GetById = nameof(GetById);\n            public const string Search = nameof(Search);\n        }\n    }\n}\n\n// Usage\nendpoints.MapGroup(Routes.Groups.V1)\n    .MapGroup(Routes.Groups.Media)\n    .MapGet(Routes.Media.ById, GetById)\n    .WithName(Routes.Media.Names.GetById);"
+    },
+    {
+      "id": "CS-API-017",
+      "title": "Endpoint Metadata Chain",
+      "severity": "major",
+      "check": "Endpoints MUST declare complete metadata: name, produces, validation filter.",
+      "bad_example": "group.MapGet(\"/{id}\", GetById);\n// No metadata - poor OpenAPI docs, no validation",
+      "good_example": "group.MapGet(\"/{id}\", GetById)\n    .WithName(Routes.Media.Names.GetById)\n    .WithSummary(\"Get media by ID\")\n    .WithDescription(\"Returns media metadata and download URLs\")\n    .Produces<MediaDto>(200)\n    .Produces(404)\n    .ProducesValidationProblem()\n    .AddEndpointFilter<ValidationFilter>();"
+    },
+    {
+      "id": "CS-API-018",
+      "title": "Orchestrator Pattern for Business Logic",
+      "severity": "major",
+      "check": "Endpoints MUST NOT contain business logic. Use an I{Domain}Orchestrator service.",
+      "bad_example": "private static async Task<IResult> GetUser(int id, IDbContext db, IFusionCache cache)\n{\n    var cached = await cache.GetOrDefaultAsync<User>($\"user:{id}\");\n    if (cached != null) return Results.Ok(cached);\n\n    var user = await db.Users.FindAsync(id);\n    if (user == null) return Results.NotFound();\n\n    await cache.SetAsync($\"user:{id}\", user);\n    return Results.Ok(user);\n}",
+      "good_example": "private static async Task<IResult> GetUser(\n    int id,\n    IUserOrchestrator orchestrator,\n    CancellationToken ct)\n{\n    var user = await orchestrator.GetByIdAsync(id, ct);\n    return user is null ? Results.NotFound() : Results.Ok(user);\n}\n\n// Business logic, caching, validation in orchestrator\npublic class UserOrchestrator(IFusionCache cache, IUserClient client) : IUserOrchestrator\n{\n    public async Task<UserDto?> GetByIdAsync(int id, CancellationToken ct) => ...\n}"
+    },
+    {
+      "id": "CS-API-019",
+      "title": "HTTP Client Handler Pipeline",
+      "severity": "major",
+      "check": "HTTP clients MUST use a handler pipeline with correlation, logging, and retry policies.",
+      "bad_example": "services.AddHttpClient<IExternalApi, ExternalApiClient>();\n// No handlers - no correlation, no logging, no retry",
+      "good_example": "services.AddHttpClient<IExternalApi, ExternalApiClient>()\n    .AddHttpMessageHandler<RequestCorrelationHandler>()\n    .AddHttpMessageHandler<HttpLoggingHandler>()\n    .AddPolicyHandler(GetRetryPolicy())\n    .AddPolicyHandler(GetCircuitBreakerPolicy());\n\nprivate static IAsyncPolicy<HttpResponseMessage> GetRetryPolicy() =>\n    HttpPolicyExtensions\n        .HandleTransientHttpError()\n        .WaitAndRetryAsync(3, retryAttempt =>\n            TimeSpan.FromSeconds(Math.Pow(2, retryAttempt)));"
+    },
+    {
+      "id": "CS-API-020",
+      "title": "Service Registration Extension Pattern",
+      "severity": "major",
+      "check": "Service registration MUST use extension methods on IServiceCollection with IConfiguration parameter.",
+      "bad_example": "// Program.cs - registration logic scattered\nbuilder.Services.AddScoped<IUserService, UserService>();\nbuilder.Services.AddScoped<IOrderService, OrderService>();\nbuilder.Services.Configure<CacheOptions>(builder.Configuration.GetSection(\"Cache\"));",
+      "good_example": "// Extensions/ServiceCollectionExtensions.cs\npublic static class ServiceCollectionExtensions\n{\n    public static IServiceCollection AddDomainServices(\n        this IServiceCollection services,\n        IConfiguration config)\n    {\n        services.AddOptions<CacheOptions>()\n            .Bind(config.GetSection(\"Cache\"))\n            .ValidateDataAnnotations()\n            .ValidateOnStart();\n\n        services.AddScoped<IUserOrchestrator, UserOrchestrator>();\n        services.AddScoped<IOrderOrchestrator, OrderOrchestrator>();\n\n        return services;\n    }\n}\n\n// Program.cs - clean\nbuilder.Services.AddDomainServices(builder.Configuration);"
+    }
+  ]
+}

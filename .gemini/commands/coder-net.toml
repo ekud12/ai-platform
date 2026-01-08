@@ -1,0 +1,12 @@
+description = "Implement C#/.NET code using the DotNet Coder Agent"
+prompt = """
+@../../agents/roles/coder.dotnet.agent.md
+
+## Task
+Implement the following feature or fix:
+
+{{args}}
+
+## Current Context
+Review the relevant files and understand the existing patterns before implementing.
+"""

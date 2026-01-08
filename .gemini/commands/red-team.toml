@@ -1,0 +1,7 @@
+description = "Perform a security audit using the Red Team Agent"
+prompt = """
+@../../agents/roles/red-team.agent.md
+
+## User Input
+{{args}}
+"""

@@ -1,0 +1,124 @@
+{
+  "id": "dotnet-language",
+  "version": "1.0.0",
+  "domain": "dotnet",
+  "applies_to": [
+    "*.cs",
+    "*.csx"
+  ],
+  "rules": [
+    {
+      "id": "CS-LANG-001",
+      "title": "File-Scoped Namespaces",
+      "severity": "info",
+      "check": "MUST use File-Scoped Namespaces (reduce nesting).",
+      "bad_example": "namespace MyApp {\n    public class Class1 { ... }\n}",
+      "good_example": "namespace MyApp;\n\npublic class Class1 { ... }"
+    },
+    {
+      "id": "CS-LANG-002",
+      "title": "Record Types for Data Transfer",
+      "severity": "major",
+      "check": "DTOs and Messages MUST be record.",
+      "bad_example": "public class UserDto {\n    public string Name { get; set; }\n}",
+      "good_example": "public record UserDto(string Name);"
+    },
+    {
+      "id": "CS-LANG-003",
+      "title": "Primary Constructors",
+      "severity": "info",
+      "check": "Use Primary Constructors for dependency injection and simple initialization.",
+      "bad_example": "public class Service {\n    private readonly ILogger _logger;\n    public Service(ILogger logger) { _logger = logger; }\n}",
+      "good_example": "public class Service(ILogger logger) { ... }"
+    },
+    {
+      "id": "CS-LANG-004",
+      "title": "Pattern Matching",
+      "severity": "major",
+      "check": "Prefer Pattern Matching (is, switch) over as casting.",
+      "bad_example": "var btn = sender as Button;\nif (btn != null) { ... }",
+      "good_example": "if (sender is Button btn) { ... }"
+    },
+    {
+      "id": "CS-LANG-005",
+      "title": "Nullable Reference Types",
+      "severity": "critical",
+      "check": "Nullable Reference Types MUST be enabled. No implicit nulls.",
+      "bad_example": "string name = null; // Warning!",
+      "good_example": "string? name = null; // OK"
+    },
+    {
+      "id": "CS-LANG-006",
+      "title": "Collection Expressions",
+      "severity": "info",
+      "check": "Use Collection Expressions [] for initialization.",
+      "bad_example": "var list = new List<int> { 1, 2, 3 };",
+      "good_example": "List<int> list = [1, 2, 3];"
+    },
+    {
+      "id": "CS-LANG-007",
+      "title": "Raw String Literals",
+      "severity": "info",
+      "check": "Use Raw String Literals \"\"\" for JSON/SQL/Regex.",
+      "bad_example": "var json = \"{\\\"prop\\\": \\\"val\\\"}\";",
+      "good_example": "var json = \"\"\"{\"prop\": \"val\"}\"\"\""
+    },
+    {
+      "id": "CS-LANG-008",
+      "title": "Required Properties",
+      "severity": "major",
+      "check": "Use required for properties that MUST be set during object init.",
+      "bad_example": "public class Config { public string Url { get; set; } }\nvar c = new Config(); // Url is null!",
+      "good_example": "public class Config { public required string Url { get; set; } }\nvar c = new Config { Url = \"...\" }; // Compiler enforced"
+    },
+    {
+      "id": "CS-LANG-009",
+      "title": "Static Abstract Interface Members",
+      "severity": "info",
+      "check": "Use static abstract in interfaces for factories/operators.",
+      "bad_example": "public interface IFactory<T> { T Create(); } // Instance method",
+      "good_example": "public interface IFactory<T> { static abstract T Create(); }"
+    },
+    {
+      "id": "CS-LANG-010",
+      "title": "Implicit Usings",
+      "severity": "info",
+      "check": "Enable Implicit Usings. Remove explicit using System;.",
+      "bad_example": "using System;\nusing System.Collections.Generic;\n// ...",
+      "good_example": "// (No usings needed for standard types)"
+    },
+    {
+      "id": "CS-LANG-011",
+      "title": "Global Usings",
+      "severity": "info",
+      "check": "Common namespaces MUST be in GlobalUsings.cs, not repeated per file.",
+      "bad_example": "// In every file\nusing Microsoft.Extensions.Logging;\nusing MyApp.Common;\nusing MyApp.Models;",
+      "good_example": "// In GlobalUsings.cs\nglobal using Microsoft.Extensions.Logging;\nglobal using MyApp.Common;\nglobal using MyApp.Models;"
+    },
+    {
+      "id": "CS-LANG-012",
+      "title": "Target-Typed New",
+      "severity": "info",
+      "check": "Use new() when type is evident from declaration.",
+      "bad_example": "Dictionary<string, List<int>> map = new Dictionary<string, List<int>>();",
+      "good_example": "Dictionary<string, List<int>> map = new();"
+    },
+    {
+      "id": "CS-LANG-013",
+      "title": "List Patterns",
+      "severity": "info",
+      "check": "Use list patterns for array/list deconstruction and pattern matching.",
+      "bad_example": "if (args.Length >= 2) {\n    var first = args[0];\n    var last = args[args.Length - 1];\n}",
+      "good_example": "if (args is [var first, .., var last]) {\n    // Use first and last\n}\n\n// Or for exact matching\nif (args is [var cmd, var file]) {\n    // Exactly 2 elements\n}"
+    },
+    {
+      "id": "CS-LANG-014",
+      "title": "XML Documentation Comments",
+      "severity": "major",
+      "check": "All public and internal classes, interfaces, methods, properties, and fields MUST have XML documentation comments. Include <summary>, <param>, <returns>, and <exception> as appropriate. Private members are excluded.",
+      "bad_example": "public class UserService\n{\n    public User GetUser(int id)\n    {\n        return _repository.Find(id);\n    }\n}",
+      "good_example": "/// <summary>\n/// Provides operations for managing users.\n/// </summary>\npublic class UserService\n{\n    /// <summary>\n    /// Retrieves a user by their unique identifier.\n    /// </summary>\n    /// <param name=\"id\">The unique identifier of the user.</param>\n    /// <returns>The user if found; otherwise, null.</returns>\n    /// <exception cref=\"ArgumentOutOfRangeException\">Thrown when id is negative.</exception>\n    public User? GetUser(int id)\n    {\n        return _repository.Find(id);\n    }\n}",
+      "rationale": "XML documentation enables IntelliSense, generates API documentation, and ensures code is self-documenting for team members."
+    }
+  ]
+}

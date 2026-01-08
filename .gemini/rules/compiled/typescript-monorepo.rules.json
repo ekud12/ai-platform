@@ -1,0 +1,55 @@
+{
+  "id": "typescript-monorepo",
+  "version": "1.0.0",
+  "domain": "typescript",
+  "applies_to": [
+    "*.ts",
+    "*.tsx"
+  ],
+  "rules": [
+    {
+      "id": "TS-MONO-001",
+      "title": "Workspace Package Naming",
+      "severity": "major",
+      "check": "Workspace packages MUST use scoped names: @apps/{name} for applications, @packages/{name} for shared libraries.",
+      "bad_example": "{ \"name\": \"my-logger\" }\n{ \"name\": \"utils\" }\n{ \"name\": \"mcp-appointments\" }",
+      "good_example": "{ \"name\": \"@packages/logger\" }\n{ \"name\": \"@packages/utils\" }\n{ \"name\": \"@apps/mcp-appointments\" }",
+      "rationale": "Scoped names prevent conflicts with npm packages and clearly distinguish internal packages."
+    },
+    {
+      "id": "TS-MONO-002",
+      "title": "Path Aliases for Internal Packages",
+      "severity": "major",
+      "check": "tsconfig MUST define path aliases for internal packages.",
+      "bad_example": "import { logger } from \"../../../packages/logger/src\";\nimport { utils } from \"../../packages/utils/src/index\";",
+      "good_example": "// tsconfig.json\n{\n  \"compilerOptions\": {\n    \"baseUrl\": \".\",\n    \"paths\": {\n      \"@packages/*\": [\"packages/*/src\"],\n      \"@apps/*\": [\"apps/*/src\"]\n    }\n  }\n}",
+      "rationale": "Path aliases enable clean imports without relative path gymnastics."
+    },
+    {
+      "id": "TS-MONO-003",
+      "title": "Turbo Task Definition",
+      "severity": "major",
+      "check": "Monorepos using Turbo MUST define task dependencies and outputs in turbo.json.",
+      "bad_example": "// No turbo.json or empty config\n{\n  \"tasks\": {}\n}",
+      "good_example": "{\n  \"$schema\": \"https://turbo.build/schema.json\",\n  \"tasks\": {\n    \"build\": {\n      \"dependsOn\": [\"^build\"],\n      \"outputs\": [\"dist/**\", \".next/**\"]\n    },\n    \"test\": {\n      \"dependsOn\": [\"build\"],\n      \"outputs\": [\"coverage/**\"]\n    },\n    \"lint\": {\n      \"outputs\": []\n    },\n    \"typecheck\": {\n      \"dependsOn\": [\"^build\"],\n      \"outputs\": []\n    }\n  }\n}",
+      "rationale": "Proper task configuration enables caching and parallel execution."
+    },
+    {
+      "id": "TS-MONO-004",
+      "title": "Shared Package Structure",
+      "severity": "major",
+      "check": "Shared packages MUST have consistent structure with src/, dist/, and proper exports.",
+      "bad_example": "packages/logger/\n├── index.ts        # Source at root\n├── logger.ts\n└── package.json    # No exports field",
+      "good_example": "packages/logger/\n├── src/\n│   ├── index.ts\n│   └── logger.ts\n├── dist/           # Build output (gitignored)\n├── package.json\n├── tsconfig.json\n└── README.md"
+    },
+    {
+      "id": "TS-MONO-005",
+      "title": "Engine Constraints",
+      "severity": "critical",
+      "check": "Monorepos MUST specify Node and package manager version constraints.",
+      "bad_example": "// No engine constraints\n{\n  \"name\": \"@apps/my-app\",\n  \"version\": \"1.0.0\"\n}",
+      "good_example": "// Root package.json\n{\n  \"name\": \"my-monorepo\",\n  \"private\": true,\n  \"engines\": {\n    \"node\": \">=20.0.0\",\n    \"pnpm\": \">=10.0.0\"\n  },\n  \"packageManager\": \"pnpm@10.0.0\"\n}",
+      "rationale": "Prevents \"works on my machine\" issues and ensures consistent builds."
+    }
+  ]
+}

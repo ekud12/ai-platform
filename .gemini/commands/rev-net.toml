@@ -1,0 +1,12 @@
+description = "Review C# code changes using the DotNet Reviewer Agent"
+prompt = """
+@../../agents/roles/reviewer.dotnet.agent.md
+
+## Code Changes to Review
+The user has prepared the following changes:
+
+!{git diff --staged}
+
+## User Input (Additional Context)
+{{args}}
+"""

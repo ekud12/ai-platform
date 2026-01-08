@@ -1,0 +1,91 @@
+{
+  "id": "typescript-security",
+  "version": "1.0.0",
+  "domain": "typescript",
+  "applies_to": [
+    "*.ts",
+    "*.tsx"
+  ],
+  "rules": [
+    {
+      "id": "TS-SEC-001",
+      "title": "No InnerHTML / DangerouslySetInnerHTML",
+      "severity": "critical",
+      "check": "Avoid direct DOM injection to prevent XSS.",
+      "bad_example": "<div dangerouslySetInnerHTML={{ __html: userInput }} />",
+      "good_example": "<div>{userInput}</div>\n// If HTML is absolutely required, use a sanitizer:\n<div dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(userInput) }} />"
+    },
+    {
+      "id": "TS-SEC-002",
+      "title": "No Console Logs in Production",
+      "severity": "minor",
+      "check": "Remove console.log statements. They leak sensitive data and clutter output.",
+      "bad_example": "try {\n  login();\n} catch (e) {\n  console.log(\"Login failed\", e); // Leaks potential stack/data\n}",
+      "good_example": "logger.error(\"Login failed\", { error: e.message });"
+    },
+    {
+      "id": "TS-SEC-003",
+      "title": "No Eval or Function Constructor",
+      "severity": "critical",
+      "check": "Do not use eval() or new Function().",
+      "bad_example": "const result = eval(userInput);",
+      "good_example": "// Parse data safely\nconst result = JSON.parse(userInput);"
+    },
+    {
+      "id": "TS-SEC-004",
+      "title": "No Secrets in Client Code",
+      "severity": "critical",
+      "check": "API keys, tokens, and secrets MUST NOT exist in frontend bundles. Use backend proxies.",
+      "bad_example": "const STRIPE_KEY = \"sk_live_abc123\"; // Exposed in bundle!\nconst response = await fetch(url, {\n    headers: { \"Authorization\": `Bearer ${STRIPE_KEY}` }\n});",
+      "good_example": "// Call your backend, which holds the secret\nconst response = await fetch(\"/api/payment\", {\n    method: \"POST\",\n    body: JSON.stringify(paymentData)\n});"
+    },
+    {
+      "id": "TS-SEC-005",
+      "title": "Secure Cookie Handling",
+      "severity": "critical",
+      "check": "Cookies MUST use Secure, HttpOnly, and SameSite=Strict attributes for sensitive data.",
+      "bad_example": "document.cookie = `session=${token}`; // Accessible to XSS, sent over HTTP",
+      "good_example": "// Set from server response header:\n// Set-Cookie: session=xyz; Secure; HttpOnly; SameSite=Strict; Path=/\n\n// Client cannot and should not set sensitive cookies"
+    },
+    {
+      "id": "TS-SEC-006",
+      "title": "No Sensitive Data in LocalStorage",
+      "severity": "critical",
+      "check": "Sensitive data (tokens, PII) MUST NOT be stored in localStorage. Use httpOnly cookies.",
+      "bad_example": "localStorage.setItem(\"authToken\", token); // XSS can steal this\nlocalStorage.setItem(\"creditCard\", cardNumber);",
+      "good_example": "// Auth tokens should be in httpOnly cookies (set by server)\n// Store only non-sensitive UI preferences in localStorage\nlocalStorage.setItem(\"theme\", \"dark\");\nlocalStorage.setItem(\"language\", \"en\");"
+    },
+    {
+      "id": "TS-SEC-007",
+      "title": "PostMessage Validation",
+      "severity": "critical",
+      "check": "postMessage handlers MUST validate origin before processing messages.",
+      "bad_example": "window.addEventListener(\"message\", (event) => {\n    processData(event.data); // Any origin can send malicious data!\n});",
+      "good_example": "const TRUSTED_ORIGINS = [\"https://app.example.com\", \"https://widget.example.com\"];\n\nwindow.addEventListener(\"message\", (event) => {\n    if (!TRUSTED_ORIGINS.includes(event.origin)) {\n        console.warn(\"Rejected message from untrusted origin:\", event.origin);\n        return;\n    }\n    processData(event.data);\n});"
+    },
+    {
+      "id": "TS-SEC-008",
+      "title": "URL Parameter Injection",
+      "severity": "critical",
+      "check": "User-controlled values in URLs MUST be encoded. Never interpolate raw input into href or src.",
+      "bad_example": "const url = `https://api.example.com/search?q=${userInput}`; // Injection risk\nlink.href = userInput; // javascript: URLs possible!",
+      "good_example": "const url = new URL(\"https://api.example.com/search\");\nurl.searchParams.set(\"q\", userInput); // Automatically encoded\n\n// Validate URL protocol before assignment\nconst parsed = new URL(userInput);\nif (parsed.protocol === \"https:\") {\n    link.href = parsed.toString();\n}"
+    },
+    {
+      "id": "TS-SEC-009",
+      "title": "CSP Compliance",
+      "severity": "major",
+      "check": "Code MUST be CSP-compatible. No inline scripts, no unsafe-eval. Use nonces if dynamic scripts required.",
+      "bad_example": "// Requires unsafe-inline\nelement.setAttribute(\"onclick\", \"doSomething()\");\n\n// Requires unsafe-eval\nconst fn = new Function(\"return \" + code);",
+      "good_example": "// Use event listeners\nelement.addEventListener(\"click\", doSomething);\n\n// Use pre-compiled code, not runtime evaluation\nimport { handler } from \"./handlers\";"
+    },
+    {
+      "id": "TS-SEC-010",
+      "title": "Dependency Audit",
+      "severity": "critical",
+      "check": "npm audit MUST pass with zero high/critical vulnerabilities before deployment.",
+      "bad_example": "# Ignoring vulnerabilities\nnpm audit # Shows 5 critical vulnerabilities\nnpm run deploy # Deploying anyway",
+      "good_example": "# CI/CD pipeline\nnpm audit --audit-level=high\n# Fails build if high/critical found\n\n# Regular maintenance\nnpm audit fix\nnpm update"
+    }
+  ]
+}

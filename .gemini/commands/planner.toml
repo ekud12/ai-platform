@@ -1,0 +1,7 @@
+description = "Orchestrate complex tasks using the Planner Agent"
+prompt = """
+@../../agents/roles/planner.agent.md
+
+## User Input
+{{args}}
+"""

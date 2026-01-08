@@ -1,0 +1,95 @@
+{
+  "id": "typescript-async",
+  "version": "1.0.0",
+  "domain": "typescript",
+  "applies_to": [
+    "*.ts",
+    "*.tsx"
+  ],
+  "rules": [
+    {
+      "id": "TS-ASYNC-001",
+      "title": "Await Promises",
+      "severity": "info",
+      "check": "All Promises must be awaited or explicitly handled. Floating promises are forbidden.",
+      "rationale": "Unhandled promises swallow errors silently. They indicate fire-and-forget patterns that lose error context."
+    },
+    {
+      "id": "TS-ASYNC-002",
+      "title": "AbortSignal Required",
+      "severity": "info",
+      "check": "Long-running async operations must accept AbortSignal for cancellation.",
+      "rationale": "Without cancellation, operations continue after callers no longer need results. AbortSignal enables graceful cancellation."
+    },
+    {
+      "id": "TS-ASYNC-003",
+      "title": "Timeout All Requests",
+      "severity": "info",
+      "check": "All external requests must have explicit timeouts configured.",
+      "rationale": "Without timeouts, external failures hang indefinitely. Timeouts enable graceful degradation and resource protection."
+    },
+    {
+      "id": "TS-ASYNC-004",
+      "title": "Promise.all for Parallel",
+      "severity": "info",
+      "check": "Independent concurrent operations must use Promise.all, not sequential await.",
+      "rationale": "Sequential await of independent operations wastes time. Promise.all enables concurrent execution."
+    },
+    {
+      "id": "TS-ASYNC-005",
+      "title": "Promise.allSettled for Resilience",
+      "severity": "info",
+      "check": "Concurrent operations that should not fail together must use Promise.allSettled.",
+      "rationale": "Promise.all fails fast on first rejection. allSettled enables partial success handling."
+    },
+    {
+      "id": "TS-ASYNC-006",
+      "title": "No Async IIFE",
+      "severity": "info",
+      "check": "Async immediately-invoked function expressions are forbidden. Use named functions or proper async initialization.",
+      "rationale": "Async IIFEs hide complexity and make errors hard to trace. Named functions improve debugging and testing."
+    },
+    {
+      "id": "TS-ASYNC-007",
+      "title": "Error Propagation",
+      "severity": "info",
+      "check": "Async functions must either handle errors or propagate them. Swallowing errors is forbidden.",
+      "rationale": "Swallowed errors make debugging impossible. Error propagation ensures issues are visible."
+    },
+    {
+      "id": "TS-ASYNC-008",
+      "title": "Race Condition Prevention",
+      "severity": "info",
+      "check": "State mutations in async contexts must account for race conditions.",
+      "rationale": "Async operations can complete out of order. State mutations without protection cause data corruption."
+    },
+    {
+      "id": "TS-ASYNC-009",
+      "title": "Retry Logic",
+      "severity": "info",
+      "check": "Transient failure scenarios must implement retry with exponential backoff.",
+      "rationale": "Transient failures are common in distributed systems. Proper retry improves reliability without overwhelming services."
+    },
+    {
+      "id": "TS-ASYNC-010",
+      "title": "No Callback Hell",
+      "severity": "info",
+      "check": "Callback-based APIs must be wrapped in Promises. Nested callbacks are forbidden.",
+      "rationale": "Callback nesting creates unreadable code. Promise wrappers enable async/await usage."
+    },
+    {
+      "id": "TS-ASYNC-011",
+      "title": "Async Generators for Streaming",
+      "severity": "info",
+      "check": "Use async generators (async function*) for streaming data instead of collecting into arrays.",
+      "rationale": "Generators yield items one at a time, reducing memory usage. They enable processing before full data is available."
+    },
+    {
+      "id": "TS-ASYNC-012",
+      "title": "No Promise Constructor Anti-pattern",
+      "severity": "info",
+      "check": "Avoid wrapping existing promises in new Promise(). Return the promise directly.",
+      "rationale": "Unnecessary Promise wrapping adds overhead and can swallow errors. It indicates misunderstanding of promise chaining."
+    }
+  ]
+}

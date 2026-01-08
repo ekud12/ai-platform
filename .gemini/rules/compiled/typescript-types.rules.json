@@ -1,0 +1,139 @@
+{
+  "id": "typescript-types",
+  "version": "1.0.0",
+  "domain": "typescript",
+  "applies_to": [
+    "*.ts",
+    "*.tsx"
+  ],
+  "rules": [
+    {
+      "id": "TS-TYPES-001",
+      "title": "No Any",
+      "severity": "critical",
+      "check": "any is STRICTLY FORBIDDEN. Use unknown if necessary.",
+      "bad_example": "function parse(input: any) { ... }",
+      "good_example": "function parse(input: unknown) { \n    if (typeof input === 'string') { ... }\n}"
+    },
+    {
+      "id": "TS-TYPES-002",
+      "title": "No Type Assertions",
+      "severity": "major",
+      "check": "Avoid as Type assertions. They hide bugs. Use type guards instead.",
+      "bad_example": "const user = response as User; // If response is wrong, this crashes later",
+      "good_example": "if (isUser(response)) {\n    const user = response; // Narrowed safely\n}"
+    },
+    {
+      "id": "TS-TYPES-003",
+      "title": "Readonly by Default",
+      "severity": "info",
+      "check": "Prefer readonly properties to prevent mutation bugs.",
+      "bad_example": "interface User { id: string; }",
+      "good_example": "interface User { readonly id: string; }"
+    },
+    {
+      "id": "TS-TYPES-004",
+      "title": "Branded Types",
+      "severity": "info",
+      "check": "Use \"Branded Types\" for IDs to prevent mixing them.",
+      "bad_example": "type UserId = string;\ntype OrderId = string;\n// Can accidentally pass OrderId to function expecting UserId",
+      "good_example": "type UserId = string & { __brand: 'UserId' };\ntype OrderId = string & { __brand: 'OrderId' };"
+    },
+    {
+      "id": "TS-TYPES-005",
+      "title": "Discriminated Unions",
+      "severity": "major",
+      "check": "Use Discriminated Unions for state management.",
+      "bad_example": "interface State { isLoading: boolean; error?: string; data?: any; }",
+      "good_example": "type State = \n  | { status: 'loading' }\n  | { status: 'error'; error: string }\n  | { status: 'success'; data: any };"
+    },
+    {
+      "id": "TS-TYPES-006",
+      "title": "Strict Null Checks",
+      "severity": "critical",
+      "check": "strictNullChecks MUST be enabled. Handle null/undefined.",
+      "bad_example": "user.profile.name // Crash if profile is undefined",
+      "good_example": "user.profile?.name ?? 'Guest'"
+    },
+    {
+      "id": "TS-TYPES-007",
+      "title": "Interface Over Type Alias",
+      "severity": "info",
+      "check": "Use interface for Objects, type for Unions.",
+      "bad_example": "type User = { name: string };",
+      "good_example": "interface User { name: string; }"
+    },
+    {
+      "id": "TS-TYPES-008",
+      "title": "Generic Constraints",
+      "severity": "minor",
+      "check": "Generics SHOULD have constraints (T extends ...).",
+      "bad_example": "function getLength<T>(arg: T) { return arg.length; } // Error",
+      "good_example": "function getLength<T extends { length: number }>(arg: T) { return arg.length; }"
+    },
+    {
+      "id": "TS-TYPES-009",
+      "title": "Utility Types",
+      "severity": "info",
+      "check": "Use built-in Utilities (Pick, Omit, Partial).",
+      "bad_example": "interface PartialUser { name?: string; age?: number; } // Duplicate definition",
+      "good_example": "type PartialUser = Partial<User>;"
+    },
+    {
+      "id": "TS-TYPES-010",
+      "title": "Return Type Annotations",
+      "severity": "major",
+      "check": "Functions MUST have explicit return types.",
+      "bad_example": "export function calculate() { return 42; }",
+      "good_example": "export function calculate(): number { return 42; }"
+    },
+    {
+      "id": "TS-TYPES-011",
+      "title": "Template Literal Types",
+      "severity": "info",
+      "check": "Use template literal types for string patterns (routes, IDs, events).",
+      "bad_example": "type EventName = string; // Any string allowed\nfunction emit(event: EventName) { ... }\nemit(\"typo_event\"); // No error",
+      "good_example": "type EventName = `on${Capitalize<string>}`; // Must start with \"on\"\n// Or explicit union\ntype EventName = \"onClick\" | \"onHover\" | \"onSubmit\";\n\nfunction emit(event: EventName) { ... }\nemit(\"onclick\"); // Error: should be \"onClick\""
+    },
+    {
+      "id": "TS-TYPES-012",
+      "title": "Const Type Parameters",
+      "severity": "info",
+      "check": "Use const type parameters for literal inference in generic functions.",
+      "bad_example": "function createRoute<T extends string>(path: T) { return { path }; }\nconst route = createRoute(\"/users\"); // type: { path: string }",
+      "good_example": "function createRoute<const T extends string>(path: T) { return { path }; }\nconst route = createRoute(\"/users\"); // type: { path: \"/users\" }"
+    },
+    {
+      "id": "TS-TYPES-013",
+      "title": "Satisfies Operator",
+      "severity": "major",
+      "check": "Use satisfies to validate types without widening. Prefer over as const when validating shape.",
+      "bad_example": "const config: Config = { port: 3000, host: \"localhost\" };\n// Type is Config - loses literal types\n\nconst config2 = { port: 3000, host: \"localhost\" } as const;\n// Doesn't validate against Config interface",
+      "good_example": "const config = {\n    port: 3000,\n    host: \"localhost\"\n} satisfies Config;\n// Validates shape AND preserves literal types"
+    },
+    {
+      "id": "TS-TYPES-014",
+      "title": "No Object/Function Types",
+      "severity": "critical",
+      "check": "Never use Object, Function, {} as types. Use specific shapes or unknown.",
+      "bad_example": "function process(data: Object) { ... }\nfunction handle(callback: Function) { ... }\nfunction accept(value: {}) { ... }",
+      "good_example": "function process(data: Record<string, unknown>) { ... }\nfunction handle(callback: () => void) { ... }\nfunction accept(value: unknown) { ... }"
+    },
+    {
+      "id": "TS-TYPES-015",
+      "title": "Zod Schema for Runtime Validation",
+      "severity": "info",
+      "check": "External data (API responses, form inputs) SHOULD use Zod schemas for runtime validation.",
+      "good_example": "import { z } from \"zod\";\n\nconst UserSchema = z.object({\n    id: z.number(),\n    name: z.string().min(1),\n    email: z.string().email()\n});\n\ntype User = z.infer<typeof UserSchema>;\n\n// Runtime validation at system boundary\nconst user = UserSchema.parse(await response.json());",
+      "rationale": "TypeScript types disappear at runtime. Zod provides runtime validation with type inference, catching invalid data at system boundaries."
+    },
+    {
+      "id": "TS-TYPES-016",
+      "title": "Infer Types from Schemas",
+      "severity": "info",
+      "check": "When using Zod, types SHOULD be inferred from schemas rather than manually duplicated.",
+      "good_example": "const CreateUserSchema = z.object({\n    name: z.string().min(1),\n    email: z.string().email(),\n    age: z.number().min(0).optional()\n});\n\n// Single source of truth\ntype CreateUserInput = z.infer<typeof CreateUserSchema>;\n\n// Use in functions\nfunction createUser(input: CreateUserInput): void {\n    const validated = CreateUserSchema.parse(input);\n    // ...\n}",
+      "rationale": "Inferring types from schemas ensures runtime validation and compile-time types stay in sync. Manual duplication leads to drift."
+    }
+  ]
+}

@@ -1,0 +1,115 @@
+{
+  "id": "dotnet-performance",
+  "version": "1.0.0",
+  "domain": "dotnet",
+  "applies_to": [
+    "*.cs",
+    "*.csx"
+  ],
+  "rules": [
+    {
+      "id": "CS-PERF-001",
+      "title": "Hot Path Allocation Budget",
+      "severity": "major",
+      "check": "Hot paths MUST NOT allocate more than 100 bytes per operation.",
+      "bad_example": "// Inside a loop\nvar data = new List<int> { 1, 2, 3 }; // Allocates on heap",
+      "good_example": "// Inside a loop\nSpan<int> data = stackalloc int[] { 1, 2, 3 }; // No heap allocation"
+    },
+    {
+      "id": "CS-PERF-002",
+      "title": "Struct for Small Value Types",
+      "severity": "info",
+      "check": "Types smaller than 16 bytes with value semantics MUST be struct.",
+      "bad_example": "public class Point { public int X; public int Y; } // Heap allocation",
+      "good_example": "public readonly struct Point { public int X { get; init; } public int Y { get; init; } }"
+    },
+    {
+      "id": "CS-PERF-003",
+      "title": "ArrayPool for Temporary Arrays",
+      "severity": "major",
+      "check": "Temporary arrays in hot paths MUST use ArrayPool.",
+      "bad_example": "byte[] buffer = new byte[1024]; // Allocation pressure\nProcess(buffer);",
+      "good_example": "var buffer = ArrayPool<byte>.Shared.Rent(1024);\ntry {\n    Process(buffer);\n} finally {\n    ArrayPool<byte>.Shared.Return(buffer);\n}"
+    },
+    {
+      "id": "CS-PERF-004",
+      "title": "StringBuilder for Loop Concatenation",
+      "severity": "major",
+      "check": "String concatenation in loops MUST use StringBuilder.",
+      "bad_example": "string s = \"\";\nforeach (var item in items) s += item; // O(N^2) allocations",
+      "good_example": "var sb = new StringBuilder();\nforeach (var item in items) sb.Append(item);\nstring s = sb.ToString();"
+    },
+    {
+      "id": "CS-PERF-005",
+      "title": "Avoid Boxing",
+      "severity": "critical",
+      "check": "Value types MUST NOT be boxed in hot paths.",
+      "bad_example": "object obj = 42; // Boxing",
+      "good_example": "int val = 42; // No boxing"
+    },
+    {
+      "id": "CS-PERF-006",
+      "title": "Sealed Classes",
+      "severity": "info",
+      "check": "Non-inherited classes MUST be sealed for devirtualization.",
+      "bad_example": "public class Service { ... }",
+      "good_example": "public sealed class Service { ... }"
+    },
+    {
+      "id": "CS-PERF-007",
+      "title": "Readonly Structs",
+      "severity": "info",
+      "check": "Immutable structs MUST be marked readonly.",
+      "bad_example": "public struct Vector3 { public float X; ... }",
+      "good_example": "public readonly struct Vector3 { public float X { get; init; } ... }"
+    },
+    {
+      "id": "CS-PERF-008",
+      "title": "Span for Slicing",
+      "severity": "major",
+      "check": "String/Array slicing MUST use Span<T> or Memory<T>.",
+      "bad_example": "string sub = text.Substring(0, 5); // New string allocation",
+      "good_example": "ReadOnlySpan<char> sub = text.AsSpan().Slice(0, 5); // Zero allocation"
+    },
+    {
+      "id": "CS-PERF-009",
+      "title": "Avoid In-Memory LINQ in Hot Paths",
+      "severity": "minor",
+      "check": "In-memory LINQ (LINQ-to-Objects) MUST NOT be used in critical hot paths. Use explicit loops instead.",
+      "bad_example": "// In tight loop over in-memory collection\nreturn items.Where(x => x > 10).Sum(); // Allocates iterators",
+      "good_example": "// In tight loop over in-memory collection\nint sum = 0;\nforeach(var x in items) { if(x > 10) sum += x; }\nreturn sum;"
+    },
+    {
+      "id": "CS-PERF-010",
+      "title": "Cache Regex Instances",
+      "severity": "major",
+      "check": "Regex instances MUST be static and compiled.",
+      "bad_example": "if (Regex.IsMatch(input, \"pattern\")) { ... } // Recompiles every time",
+      "good_example": "[GeneratedRegex(\"pattern\")]\nprivate static partial Regex MyRegex();\n// Or: private static readonly Regex _regex = new(\"pattern\", RegexOptions.Compiled);"
+    },
+    {
+      "id": "CS-PERF-011",
+      "title": "Frozen Collections",
+      "severity": "major",
+      "check": "Use FrozenDictionary / FrozenSet for read-only lookup tables initialized at startup.",
+      "bad_example": "// Dictionary has overhead for mutation support we don't need\nprivate static readonly Dictionary<string, Handler> _handlers = new() {\n    [\"create\"] = new CreateHandler(),\n    [\"delete\"] = new DeleteHandler()\n};",
+      "good_example": "private static readonly FrozenDictionary<string, Handler> _handlers =\n    new Dictionary<string, Handler> {\n        [\"create\"] = new CreateHandler(),\n        [\"delete\"] = new DeleteHandler()\n    }.ToFrozenDictionary();"
+    },
+    {
+      "id": "CS-PERF-012",
+      "title": "SearchValues",
+      "severity": "major",
+      "check": "Use SearchValues<T> for repeated character/byte searches instead of Contains.",
+      "bad_example": "// Allocates array and searches linearly each time\nbool hasVowel = input.IndexOfAny(['a', 'e', 'i', 'o', 'u']) >= 0;",
+      "good_example": "private static readonly SearchValues<char> Vowels =\n    SearchValues.Create(\"aeiou\");\n\nbool hasVowel = input.AsSpan().IndexOfAny(Vowels) >= 0;"
+    },
+    {
+      "id": "CS-PERF-013",
+      "title": "Async State Machine Overhead",
+      "severity": "minor",
+      "check": "Avoid async in tight loops. Consider batching operations to reduce state machine allocations.",
+      "bad_example": "foreach (var item in items) {\n    await ProcessItemAsync(item); // State machine per iteration\n}",
+      "good_example": "// Option 1: Batch parallel execution\nawait Parallel.ForEachAsync(items, async (item, ct) => {\n    await ProcessItemAsync(item);\n});\n\n// Option 2: If order matters, batch the I/O\nvar batches = items.Chunk(100);\nforeach (var batch in batches) {\n    await Task.WhenAll(batch.Select(ProcessItemAsync));\n}"
+    }
+  ]
+}

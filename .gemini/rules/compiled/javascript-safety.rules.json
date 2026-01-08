@@ -1,0 +1,96 @@
+{
+  "id": "javascript-safety",
+  "version": "1.0.0",
+  "domain": "javascript",
+  "applies_to": [
+    "*.js",
+    "*.jsx",
+    "*.mjs"
+  ],
+  "rules": [
+    {
+      "id": "JS-SAFE-001",
+      "title": "Defensive Type Checking",
+      "severity": "info",
+      "check": "Functions must validate parameter types at boundaries.",
+      "rationale": "Without compile-time types, runtime validation prevents type errors. Boundary validation catches issues early."
+    },
+    {
+      "id": "JS-SAFE-002",
+      "title": "Null Checks",
+      "severity": "info",
+      "check": "Nullable values must be checked before use.",
+      "rationale": "Null reference errors are common in JavaScript. Explicit checks prevent crashes and clarify logic."
+    },
+    {
+      "id": "JS-SAFE-003",
+      "title": "Array Bounds",
+      "severity": "info",
+      "check": "Array index access must be bounds-checked when index is variable.",
+      "rationale": "Out-of-bounds access returns undefined, not an error. Explicit checks catch logic errors."
+    },
+    {
+      "id": "JS-SAFE-004",
+      "title": "Error Handling",
+      "severity": "info",
+      "check": "All potentially throwing operations must have error handling.",
+      "rationale": "Unhandled exceptions crash applications. Proper error handling enables graceful degradation."
+    },
+    {
+      "id": "JS-SAFE-005",
+      "title": "Input Validation",
+      "severity": "info",
+      "check": "All external input must be validated before processing.",
+      "rationale": "External input is untrusted by definition. Validation prevents injection and logic errors."
+    },
+    {
+      "id": "JS-SAFE-006",
+      "title": "Safe JSON",
+      "severity": "info",
+      "check": "JSON.parse must be wrapped in error handling.",
+      "rationale": "JSON.parse throws on invalid input. Network responses and user input may contain invalid JSON."
+    },
+    {
+      "id": "JS-SAFE-007",
+      "title": "Date Handling",
+      "severity": "info",
+      "check": "Date parsing must validate results. Invalid Date must be detected and handled.",
+      "rationale": "Invalid date strings produce Invalid Date, not errors. Invalid Date propagates silently through calculations."
+    },
+    {
+      "id": "JS-SAFE-008",
+      "title": "Number Safety",
+      "severity": "info",
+      "check": "Numeric operations must guard against NaN, Infinity, and precision issues.",
+      "rationale": "JavaScript numbers have edge cases that produce unexpected results. Validation ensures correct calculations."
+    },
+    {
+      "id": "JS-SAFE-009",
+      "title": "Prototype Safety",
+      "severity": "info",
+      "check": "Object property access must not traverse prototype chain unexpectedly.",
+      "rationale": "Prototype pollution and inherited properties cause security and logic issues. Object.hasOwn must be used."
+    },
+    {
+      "id": "JS-SAFE-010",
+      "title": "Event Handler Safety",
+      "severity": "info",
+      "check": "Event handlers must not throw unhandled exceptions.",
+      "rationale": "Exceptions in event handlers can break application state. Handlers must catch and log errors."
+    },
+    {
+      "id": "JS-SAFE-011",
+      "title": "Regex Safety",
+      "severity": "info",
+      "check": "User input in RegExp MUST be escaped. Use libraries for complex patterns to avoid ReDoS.",
+      "rationale": "Unescaped user input enables injection. Complex patterns can cause catastrophic backtracking (ReDoS attacks)."
+    },
+    {
+      "id": "JS-SAFE-012",
+      "title": "URL Construction",
+      "severity": "info",
+      "check": "Use URL constructor instead of string concatenation for building URLs.",
+      "rationale": "String concatenation is error-prone and can create invalid URLs. URL constructor handles encoding and validation automatically."
+    }
+  ]
+}

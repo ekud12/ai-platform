@@ -1,0 +1,102 @@
+{
+  "id": "dotnet-forbidden",
+  "version": "1.0.0",
+  "domain": "dotnet",
+  "applies_to": [
+    "*.cs",
+    "*.csx"
+  ],
+  "rules": [
+    {
+      "id": "CS-FORBID-001",
+      "title": "No Dynamic Type",
+      "severity": "info",
+      "check": "The dynamic keyword is forbidden except for COM interop scenarios.",
+      "rationale": "Dynamic bypasses compile-time type checking. It hides bugs that would be caught by the compiler and reduces code maintainability."
+    },
+    {
+      "id": "CS-FORBID-002",
+      "title": "No Reflection for Business Logic",
+      "severity": "info",
+      "check": "Reflection must not be used for business logic. Reflection is permitted only for framework code.",
+      "rationale": "Reflection is slow, fragile, and difficult to maintain. Business logic must use compile-time safe patterns."
+    },
+    {
+      "id": "CS-FORBID-003",
+      "title": "No Thread.Sleep",
+      "severity": "info",
+      "check": "Thread.Sleep is forbidden. Task.Delay must be used for delays in async code.",
+      "rationale": "Thread.Sleep blocks the thread, wasting resources. It cannot be cancelled and does not work correctly in async contexts."
+    },
+    {
+      "id": "CS-FORBID-004",
+      "title": "No Empty Catch",
+      "severity": "info",
+      "check": "Empty catch blocks are forbidden. All exceptions must be logged or rethrown.",
+      "rationale": "Empty catches hide failures and make debugging impossible. Every exception must be recorded or propagated."
+    },
+    {
+      "id": "CS-FORBID-005",
+      "title": "No Catch Exception",
+      "severity": "info",
+      "check": "Catching base Exception is forbidden except at top-level handlers.",
+      "rationale": "Catching all exceptions masks specific failures. It catches fatal exceptions that should not be handled."
+    },
+    {
+      "id": "CS-FORBID-006",
+      "title": "No Mutable Statics",
+      "severity": "info",
+      "check": "Mutable static fields are forbidden except for thread-safe caches.",
+      "rationale": "Mutable statics create hidden state and race conditions. They make testing difficult and behavior unpredictable."
+    },
+    {
+      "id": "CS-FORBID-007",
+      "title": "No Service Locator",
+      "severity": "info",
+      "check": "Service locator pattern is forbidden. Dependency injection must be used.",
+      "rationale": "Service locator hides dependencies and complicates testing. Constructor injection makes dependencies explicit."
+    },
+    {
+      "id": "CS-FORBID-008",
+      "title": "No God Classes",
+      "severity": "info",
+      "check": "Classes exceeding 500 lines or 20 public members must be refactored.",
+      "rationale": "Large classes violate single responsibility. They are difficult to understand, test, and maintain."
+    },
+    {
+      "id": "CS-FORBID-009",
+      "title": "No Magic Strings",
+      "severity": "info",
+      "check": "String literals used as identifiers or configuration keys must be constants or nameof expressions.",
+      "rationale": "Magic strings break refactoring and enable typo bugs. Constants and nameof enable compile-time validation."
+    },
+    {
+      "id": "CS-FORBID-010",
+      "title": "No Obsolete API Usage",
+      "severity": "info",
+      "check": "APIs marked Obsolete must not be used in new code.",
+      "rationale": "Obsolete APIs will be removed in future versions. Using them creates technical debt and upgrade blockers."
+    },
+    {
+      "id": "CS-FORBID-011",
+      "title": "No GC.Collect",
+      "severity": "info",
+      "check": "Manual GC.Collect() calls are forbidden except in benchmarks or test cleanup.",
+      "rationale": "Manual GC disrupts the runtime's optimization. It causes performance issues and indicates design problems."
+    },
+    {
+      "id": "CS-FORBID-012",
+      "title": "No Direct Thread Creation",
+      "severity": "info",
+      "check": "Direct new Thread() is forbidden. Use Task.Run or thread pool.",
+      "rationale": "Manual threads bypass the thread pool and its optimizations. They make resource management difficult."
+    },
+    {
+      "id": "CS-FORBID-013",
+      "title": "No Ambient Context",
+      "severity": "info",
+      "check": "ThreadLocal<T> and AsyncLocal<T> for passing dependencies are forbidden. Use dependency injection.",
+      "rationale": "Ambient context hides dependencies and complicates testing. It creates implicit coupling that is hard to reason about."
+    }
+  ]
+}

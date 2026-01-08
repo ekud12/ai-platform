@@ -1,0 +1,28 @@
+# Environment files with secrets
+.env
+*.env.local
+
+# IDE
+.idea/
+.vscode/
+*.suo
+*.user
+
+# Build outputs
+bin/
+obj/
+dist/
+node_modules/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Temporary files
+*.tmp
+*.swp
+.panic

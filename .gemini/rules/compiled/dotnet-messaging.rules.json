@@ -1,0 +1,53 @@
+{
+  "id": "dotnet-messaging",
+  "version": "1.0.0",
+  "domain": "dotnet",
+  "applies_to": [
+    "*.cs",
+    "*.csx"
+  ],
+  "rules": [
+    {
+      "id": "CS-MSG-001",
+      "title": "Messaging Abstraction Layer",
+      "severity": "critical",
+      "check": "Messaging MUST use abstractions (IMessageSender, IMessageHandler) not direct broker clients.",
+      "bad_example": "public class OrderService\n{\n    private readonly NatsConnection _nats;\n\n    public async Task PlaceOrder(Order order)\n    {\n        await _nats.PublishAsync(\"orders.placed\", order);\n    }\n}",
+      "good_example": "public interface IMessageSender\n{\n    Task SendToQueueAsync<T>(string queue, T message, CancellationToken ct);\n    Task PublishToTopicAsync<T>(string topic, T message, CancellationToken ct);\n}\n\npublic class OrderService(IMessageSender sender)\n{\n    public async Task PlaceOrder(Order order, CancellationToken ct)\n    {\n        await sender.PublishToTopicAsync(\"orders.placed\", order, ct);\n    }\n}",
+      "rationale": "Abstraction enables switching between NATS, Service Bus, RabbitMQ without changing business logic."
+    },
+    {
+      "id": "CS-MSG-002",
+      "title": "Message Handler Interface",
+      "severity": "major",
+      "check": "Message handlers MUST implement IMessageHandler<T> for automatic discovery and registration.",
+      "bad_example": "public class OrderHandler\n{\n    public void Handle(OrderEvent e) { ... } // No interface, not discoverable\n}",
+      "good_example": "public interface IMessageHandler<T> where T : class\n{\n    Task HandleAsync(T message, CancellationToken ct);\n}\n\npublic class OrderPlacedHandler : IMessageHandler<OrderPlacedEvent>\n{\n    public async Task HandleAsync(OrderPlacedEvent message, CancellationToken ct)\n    {\n        // Handle the message\n    }\n}\n\n// Registration via assembly scanning\nservices.AddMessageHandlers(typeof(OrderPlacedHandler).Assembly);"
+    },
+    {
+      "id": "CS-MSG-003",
+      "title": "Dual Messaging Support",
+      "severity": "info",
+      "check": "Enterprise solutions SHOULD support multiple messaging backends via configuration.",
+      "good_example": "// appsettings.json\n{\n  \"Messaging\": {\n    \"Provider\": \"Nats\"\n  }\n}\n\n// appsettings.Production.json\n{\n  \"Messaging\": {\n    \"Provider\": \"ServiceBus\"\n  }\n}",
+      "rationale": "Enables local development with NATS while using Azure Service Bus in production."
+    },
+    {
+      "id": "CS-MSG-004",
+      "title": "Job SDK Abstraction",
+      "severity": "major",
+      "check": "Background jobs MUST use a job SDK with IJob, IJobHandler, IJobResult abstractions.",
+      "bad_example": "// Direct NATS job handling mixed with business logic\nawait _nats.SubscribeAsync(\"jobs.sync\", async msg =>\n{\n    var data = JsonSerializer.Deserialize<SyncData>(msg.Data);\n    await SyncAsync(data);\n    await msg.AckAsync();\n});",
+      "good_example": "public interface IJob\n{\n    string JobId { get; }\n    string JobType { get; }\n}\n\npublic interface IJobHandler<T> where T : IJob\n{\n    Task<IJobResult> HandleAsync(T job, CancellationToken ct);\n}\n\npublic interface IJobResult\n{\n    bool Success { get; }\n    string? Error { get; }\n}\n\npublic class SyncJob : IJob\n{\n    public required string JobId { get; init; }\n    public string JobType => \"sync\";\n    public required string EntityId { get; init; }\n}\n\npublic class SyncJobHandler : IJobHandler<SyncJob>\n{\n    public async Task<IJobResult> HandleAsync(SyncJob job, CancellationToken ct)\n    {\n        // Handle job\n        return JobResult.Success();\n    }\n}"
+    },
+    {
+      "id": "CS-MSG-005",
+      "title": "Message Idempotency",
+      "severity": "critical",
+      "check": "Message handlers MUST be idempotent. Use message ID for deduplication.",
+      "bad_example": "public class PaymentHandler : IMessageHandler<PaymentEvent>\n{\n    public async Task HandleAsync(PaymentEvent msg, CancellationToken ct)\n    {\n        await _payments.ChargeAsync(msg.Amount); // Charged multiple times!\n    }\n}",
+      "good_example": "public class PaymentHandler : IMessageHandler<PaymentEvent>\n{\n    private readonly IIdempotencyStore _store;\n\n    public async Task HandleAsync(PaymentEvent msg, CancellationToken ct)\n    {\n        if (await _store.HasProcessedAsync(msg.MessageId, ct))\n            return; // Already processed - skip\n\n        await _payments.ChargeAsync(msg.Amount);\n        await _store.MarkProcessedAsync(msg.MessageId, ct);\n    }\n}",
+      "rationale": "Messages can be delivered multiple times (at-least-once delivery). Handlers must handle duplicates gracefully."
+    }
+  ]
+}

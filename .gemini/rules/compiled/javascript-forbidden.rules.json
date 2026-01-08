@@ -1,0 +1,96 @@
+{
+  "id": "javascript-forbidden",
+  "version": "1.0.0",
+  "domain": "javascript",
+  "applies_to": [
+    "*.js",
+    "*.jsx",
+    "*.mjs"
+  ],
+  "rules": [
+    {
+      "id": "JS-FORBID-001",
+      "title": "No var",
+      "severity": "info",
+      "check": "The var keyword is forbidden. Use const or let.",
+      "rationale": "var has function scope and hoisting that cause bugs. Block-scoped const/let are safer and clearer."
+    },
+    {
+      "id": "JS-FORBID-002",
+      "title": "No eval",
+      "severity": "info",
+      "check": "eval and Function constructor are forbidden.",
+      "rationale": "eval executes arbitrary code, enabling injection attacks. It bypasses static analysis and optimization."
+    },
+    {
+      "id": "JS-FORBID-003",
+      "title": "No with",
+      "severity": "info",
+      "check": "The with statement is forbidden.",
+      "rationale": "with creates ambiguous scope. It is deprecated, error-prone, and prevents optimization."
+    },
+    {
+      "id": "JS-FORBID-004",
+      "title": "No arguments Object",
+      "severity": "info",
+      "check": "The arguments object is forbidden. Use rest parameters.",
+      "rationale": "arguments is not a real array. Rest parameters provide proper array functionality."
+    },
+    {
+      "id": "JS-FORBID-005",
+      "title": "No == Operator",
+      "severity": "info",
+      "check": "Loose equality (== and !=) is forbidden. Use strict equality (=== and !==).",
+      "rationale": "Loose equality has complex coercion rules that cause bugs. Strict equality is predictable."
+    },
+    {
+      "id": "JS-FORBID-006",
+      "title": "No Implicit Globals",
+      "severity": "info",
+      "check": "Implicit global variable creation is forbidden.",
+      "rationale": "Undeclared variables become globals, polluting global scope. This causes hard-to-find bugs."
+    },
+    {
+      "id": "JS-FORBID-007",
+      "title": "No Callbacks for Async",
+      "severity": "info",
+      "check": "Callback-based async patterns are forbidden for new code. Use Promises/async-await.",
+      "rationale": "Callbacks create nesting and make error handling difficult. Promises are the modern standard."
+    },
+    {
+      "id": "JS-FORBID-008",
+      "title": "No document.write",
+      "severity": "info",
+      "check": "document.write is forbidden.",
+      "rationale": "document.write blocks parsing and can overwrite the entire document. It causes performance issues."
+    },
+    {
+      "id": "JS-FORBID-009",
+      "title": "No Synchronous XHR",
+      "severity": "info",
+      "check": "Synchronous XMLHttpRequest is forbidden.",
+      "rationale": "Synchronous requests block the main thread, freezing the UI. They are deprecated in modern browsers."
+    },
+    {
+      "id": "JS-FORBID-010",
+      "title": "No Inline Event Handlers",
+      "severity": "info",
+      "check": "Inline HTML event handlers (onclick, onload, etc.) are forbidden.",
+      "rationale": "Inline handlers mix behavior with markup. They complicate CSP and cannot be easily managed."
+    },
+    {
+      "id": "JS-FORBID-011",
+      "title": "No Alert/Confirm/Prompt",
+      "severity": "info",
+      "check": "Browser dialogs (alert, confirm, prompt) are forbidden. Use UI components.",
+      "rationale": "Browser dialogs block the main thread and cannot be styled. They provide poor UX and break accessibility."
+    },
+    {
+      "id": "JS-FORBID-012",
+      "title": "No Deep Callback Nesting",
+      "severity": "info",
+      "check": "Callback nesting beyond 2 levels is forbidden. Refactor to promises, async/await, or named functions.",
+      "rationale": "Deep nesting creates \"pyramid of doom\" that is hard to read and maintain. It indicates need for refactoring."
+    }
+  ]
+}
