@@ -11,6 +11,9 @@ prompt = """
 ## Instructions
 1. Detect the code type (C#, TypeScript, or both)
 2. Use **reviewer-dotnet** or **reviewer-typescript** skill as appropriate
-3. Check against ALL rules
-4. Output violations found, or PASS if none
+3. **MANDATORY**: The reviewer MUST check against ALL compiled rules in the `.gemini/knowledge/compiled/` directory.
+4. **OUTPUT**: You MUST provide the structured JSON report as defined in your skill definition, including:
+   - `status`: PASS | BLOCKED | PASS_WITH_WARNINGS
+   - `total_rules_checked`: (The actual count of rules checked)
+   - `blocking_failures`: (List of rules violated with fix instructions)
 """

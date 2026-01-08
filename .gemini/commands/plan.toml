@@ -22,17 +22,23 @@ Use the **planner** skill to analyze the request and create an execution plan.
 ### 3. CODE
 Use **coder-dotnet** or **coder-typescript** skill based on the code type.
 
-### 4. REVIEW
-Use **reviewer-dotnet** or **reviewer-typescript** skill to check against all rules.
+### 4. REVIEW (STRICT)
+Use **reviewer-dotnet** or **reviewer-typescript** skill. 
+**The reviewer MUST:**
+- Load ALL compiled JSON rules for the language.
+- Provide a JSON report with `status: BLOCKED` if any CRITICAL or MAJOR violations exist.
+- List specific `rule_id` and `fix` instructions for every violation.
 
 ### 5. DECISION
-- If ANY critical/major violations → go to step 6
-- If PASS → go to step 7
+- If status is `BLOCKED` → **MANDATORY FIX REQUIRED**. Go to step 6.
+- If status is `PASS` or `PASS_WITH_WARNINGS` → Go to step 7.
 
-### 6. FIX
-Fix the violations. Go back to step 4 (max 5 iterations).
+### 6. FIX & RE-REVIEW
+The **coder** MUST take the `blocking_failures` from the reviewer's JSON report and implement the requested fixes.
+After fixing, **RE-RUN STEP 4** (Maximum 5 iterations).
 
 ### 7. COMPLETE
+Only complete the task when the reviewer provides a `PASS` status.
 ```json
 {
   "success": true,
