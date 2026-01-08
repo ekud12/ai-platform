@@ -1,0 +1,218 @@
+# Shell Command Security Policies
+# These rules control dangerous shell operations
+
+# === CRITICAL: Destructive Operations (DENY) ===
+
+[[rule]]
+toolName = "run_shell_command"
+commandRegex = "rm\\s+(-[rRf]+\\s+|.*-[rRf]+)"
+decision = "deny"
+priority = 900
+
+[[rule]]
+toolName = "run_shell_command"
+commandRegex = "rmdir\\s+/[sS]"
+decision = "deny"
+priority = 900
+
+[[rule]]
+toolName = "run_shell_command"
+commandRegex = "del\\s+/[sSfF]"
+decision = "deny"
+priority = 900
+
+[[rule]]
+toolName = "run_shell_command"
+commandRegex = "Remove-Item.*-Recurse"
+decision = "deny"
+priority = 900
+
+# === CRITICAL: Privilege Escalation (DENY) ===
+
+[[rule]]
+toolName = "run_shell_command"
+commandPrefix = "sudo "
+decision = "deny"
+priority = 900
+
+[[rule]]
+toolName = "run_shell_command"
+commandPrefix = "runas "
+decision = "deny"
+priority = 900
+
+[[rule]]
+toolName = "run_shell_command"
+commandRegex = "Start-Process.*-Verb\\s+RunAs"
+decision = "deny"
+priority = 900
+
+# === HIGH: Permission Changes (DENY) ===
+
+[[rule]]
+toolName = "run_shell_command"
+commandPrefix = "chmod "
+decision = "deny"
+priority = 800
+
+[[rule]]
+toolName = "run_shell_command"
+commandPrefix = "chown "
+decision = "deny"
+priority = 800
+
+[[rule]]
+toolName = "run_shell_command"
+commandPrefix = "icacls "
+decision = "deny"
+priority = 800
+
+# === CRITICAL: System Operations (DENY) ===
+
+[[rule]]
+toolName = "run_shell_command"
+commandPrefix = "mkfs"
+decision = "deny"
+priority = 900
+
+[[rule]]
+toolName = "run_shell_command"
+commandRegex = "dd\\s+if="
+decision = "deny"
+priority = 900
+
+[[rule]]
+toolName = "run_shell_command"
+commandRegex = "format\\s+[a-zA-Z]:"
+decision = "deny"
+priority = 900
+
+[[rule]]
+toolName = "run_shell_command"
+commandPrefix = "diskpart"
+decision = "deny"
+priority = 900
+
+[[rule]]
+toolName = "run_shell_command"
+commandRegex = "reg\\s+(add|delete)"
+decision = "deny"
+priority = 900
+
+[[rule]]
+toolName = "run_shell_command"
+commandRegex = "Set-ItemProperty.*HKLM:"
+decision = "deny"
+priority = 900
+
+# === CRITICAL: Remote Code Execution (DENY) ===
+
+[[rule]]
+toolName = "run_shell_command"
+commandRegex = "curl\\s+.*\\|\\s*(ba)?sh"
+decision = "deny"
+priority = 900
+
+[[rule]]
+toolName = "run_shell_command"
+commandRegex = "wget\\s+.*\\|\\s*(ba)?sh"
+decision = "deny"
+priority = 900
+
+[[rule]]
+toolName = "run_shell_command"
+commandRegex = "Invoke-WebRequest.*\\|.*Invoke-Expression"
+decision = "deny"
+priority = 900
+
+[[rule]]
+toolName = "run_shell_command"
+commandRegex = "iex\\s*\\("
+decision = "deny"
+priority = 900
+
+[[rule]]
+toolName = "run_shell_command"
+commandPrefix = "Invoke-Expression"
+decision = "deny"
+priority = 900
+
+# === ALLOWED: Safe Read Operations ===
+
+[[rule]]
+toolName = "run_shell_command"
+commandPrefix = "ls "
+decision = "allow"
+priority = 100
+
+[[rule]]
+toolName = "run_shell_command"
+commandPrefix = "dir "
+decision = "allow"
+priority = 100
+
+[[rule]]
+toolName = "run_shell_command"
+commandPrefix = "cat "
+decision = "allow"
+priority = 100
+
+[[rule]]
+toolName = "run_shell_command"
+commandPrefix = "type "
+decision = "allow"
+priority = 100
+
+[[rule]]
+toolName = "run_shell_command"
+commandPrefix = "head "
+decision = "allow"
+priority = 100
+
+[[rule]]
+toolName = "run_shell_command"
+commandPrefix = "tail "
+decision = "allow"
+priority = 100
+
+[[rule]]
+toolName = "run_shell_command"
+commandPrefix = "grep "
+decision = "allow"
+priority = 100
+
+[[rule]]
+toolName = "run_shell_command"
+commandPrefix = "find "
+decision = "allow"
+priority = 100
+
+[[rule]]
+toolName = "run_shell_command"
+commandPrefix = "tree "
+decision = "allow"
+priority = 100
+
+[[rule]]
+toolName = "run_shell_command"
+commandPrefix = "pwd"
+decision = "allow"
+priority = 100
+
+[[rule]]
+toolName = "run_shell_command"
+commandPrefix = "whoami"
+decision = "allow"
+priority = 100
+
+[[rule]]
+toolName = "run_shell_command"
+commandPrefix = "hostname"
+decision = "allow"
+priority = 100
+
+[[rule]]
+toolName = "run_shell_command"
+commandPrefix = "echo "
+decision = "allow"
+priority = 100

@@ -7,49 +7,45 @@ You are operating within the AI Corporate Agent Operating System, a constitution
 1. **Human Supremacy**: Human authority is supreme. Never override human decisions.
 2. **Panic Halt**: If `.panic` file exists, halt all operations immediately.
 3. **Single Ownership**: Each concern has exactly one owning agent.
-4. **No Code Execution**: Agents analyze and recommend; they do not execute directly.
-5. **Explicit Prohibition**: Actions not explicitly permitted are forbidden.
-6. **Modernity Default**: Assume the current year is **2025**. Prefer modern language features in our domains, and strict safety patterns over legacy implementations unless explicitly instructed otherwise.
+4. **Explicit Prohibition**: Actions not explicitly permitted are forbidden.
+5. **Modernity Default**: Assume the current year is **2025**. Prefer modern language features and strict safety patterns.
 
 ## Constitutional Constraints
 
-Before any action, verify compliance with:
+@./knowledge/constitution/constitution.rules.md
+@./knowledge/constitution/forbidden-goals.rules.md
+@./knowledge/constitution/conflicts.rules.md
 
-- `rules/constitution/constitution.rules.md` - Core invariants (CONST-\*)
-- `rules/constitution/forbidden-goals.rules.md` - Banned objectives (CONST-FORBID-\*)
-- `rules/constitution/conflicts.rules.md` - Rule precedence
+## Available Skills
 
-## Agent Invocation
+Use these skills for specific tasks:
+- **planner** - System architect, designs solutions and creates execution plans
+- **coder-dotnet** - Senior .NET developer, writes C# code
+- **coder-typescript** - Full-stack engineer, writes TypeScript/React code
+- **reviewer-dotnet** - Principal architect, reviews C# code against 250 rules
+- **reviewer-typescript** - Lead frontend engineer, reviews TypeScript code
+- **red-team** - Security researcher, finds vulnerabilities
 
-Invoke agents using custom commands or via the ADK loader:
+## Policies
 
-- `/agents:planner` - Task decomposition (Strict JSON output)
-- `/agents:dotnet-review` - C# code review
-- `/agents:typescript-review` - TypeScript code review
-- `/agents:security-audit` - Security assessment
+Security policies in `./policies/`:
+- `shell-security.toml` - Dangerous shell commands
+- `git-security.toml` - Git operations
+- `cloud-security.toml` - Cloud CLIs & K8s
+- `dev-tools.toml` - Development tools
+- `file-operations.toml` - File read/write
 
-## Rulebook References
+## Protocols
 
-When reporting violations, always cite specific rule IDs (e.g., `[CS-SEC-001]`).
+@./knowledge/protocols/orchestration.protocol.md
+@./knowledge/protocols/observability.protocol.md
+@./knowledge/protocols/execution-loop.protocol.md
 
-## Safety & Sandboxing
+## Agent Contract
 
-All operations are governed by these policies:
+@./knowledge/base/agent.contract.md
 
-@./policies/security.policy.md
-@./policies/sandbox.policy.md
-@./policies/filesystem.policy.md
-@./policies/command.policy.md
-@./policies/network.policy.md
+## Documentation
 
-## System Manuals
-
-@./manuals/README.AGENTS.md @./manuals/README.HOW-IT-WORKS.md @./manuals/README.RULEBOOKS.md @./manuals/README.GOVERNANCE.md @./manuals/README.TOPOLOGY.md
-
-## Project Memory (External)
-
-@../.gemmem/snapshot.json @../.gemmem/history.json
-
-## Core Constraints & Protocols
-
-@./rules/constitution/constitution.rules.md @./agents/base/agent.contract.md @./protocols/orchestration.protocol.md @./topology/allowed-edges.md
+@./knowledge/misc/manuals/README.HOW-IT-WORKS.md
+@./knowledge/misc/topology/allowed-edges.md

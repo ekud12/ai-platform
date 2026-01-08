@@ -1,0 +1,190 @@
+# Cloud & External Services Security Policies
+# These rules control cloud CLI and external service access
+
+# === CRITICAL: Cloud CLIs (DENY) ===
+
+[[rule]]
+toolName = "run_shell_command"
+commandPrefix = "aws "
+decision = "deny"
+priority = 900
+
+[[rule]]
+toolName = "run_shell_command"
+commandPrefix = "az "
+decision = "deny"
+priority = 900
+
+[[rule]]
+toolName = "run_shell_command"
+commandPrefix = "gcloud "
+decision = "deny"
+priority = 900
+
+[[rule]]
+toolName = "run_shell_command"
+commandPrefix = "terraform "
+decision = "deny"
+priority = 900
+
+[[rule]]
+toolName = "run_shell_command"
+commandPrefix = "pulumi "
+decision = "deny"
+priority = 900
+
+# === CRITICAL: Kubernetes Mutations (DENY) ===
+
+[[rule]]
+toolName = "run_shell_command"
+commandRegex = "kubectl\\s+(delete|apply|create|patch)"
+decision = "deny"
+priority = 900
+
+[[rule]]
+toolName = "run_shell_command"
+commandRegex = "helm\\s+(install|upgrade|delete|uninstall)"
+decision = "deny"
+priority = 900
+
+# === ALLOWED: Kubernetes Read-Only ===
+
+[[rule]]
+toolName = "run_shell_command"
+commandPrefix = "kubectl get"
+decision = "allow"
+priority = 100
+
+[[rule]]
+toolName = "run_shell_command"
+commandPrefix = "kubectl describe"
+decision = "allow"
+priority = 100
+
+[[rule]]
+toolName = "run_shell_command"
+commandPrefix = "kubectl logs"
+decision = "allow"
+priority = 100
+
+[[rule]]
+toolName = "run_shell_command"
+commandPrefix = "helm list"
+decision = "allow"
+priority = 100
+
+[[rule]]
+toolName = "run_shell_command"
+commandPrefix = "helm status"
+decision = "allow"
+priority = 100
+
+# === HIGH: Docker Destructive Operations (DENY) ===
+
+[[rule]]
+toolName = "run_shell_command"
+commandRegex = "docker\\s+(rm|rmi)"
+decision = "deny"
+priority = 800
+
+[[rule]]
+toolName = "run_shell_command"
+commandRegex = "docker\\s+system\\s+prune"
+decision = "deny"
+priority = 800
+
+[[rule]]
+toolName = "run_shell_command"
+commandRegex = "docker\\s+volume\\s+rm"
+decision = "deny"
+priority = 800
+
+# === ALLOWED: Docker Read-Only ===
+
+[[rule]]
+toolName = "run_shell_command"
+commandPrefix = "docker ps"
+decision = "allow"
+priority = 100
+
+[[rule]]
+toolName = "run_shell_command"
+commandPrefix = "docker images"
+decision = "allow"
+priority = 100
+
+[[rule]]
+toolName = "run_shell_command"
+commandPrefix = "docker logs"
+decision = "allow"
+priority = 100
+
+[[rule]]
+toolName = "run_shell_command"
+commandPrefix = "docker inspect"
+decision = "allow"
+priority = 100
+
+[[rule]]
+toolName = "run_shell_command"
+commandPrefix = "docker compose ps"
+decision = "allow"
+priority = 100
+
+[[rule]]
+toolName = "run_shell_command"
+commandPrefix = "docker compose logs"
+decision = "allow"
+priority = 100
+
+# === CRITICAL: Package Publishing (DENY) ===
+
+[[rule]]
+toolName = "run_shell_command"
+commandPrefix = "npm publish"
+decision = "deny"
+priority = 900
+
+[[rule]]
+toolName = "run_shell_command"
+commandRegex = "dotnet\\s+nuget\\s+push"
+decision = "deny"
+priority = 900
+
+[[rule]]
+toolName = "run_shell_command"
+commandPrefix = "pip upload"
+decision = "deny"
+priority = 900
+
+[[rule]]
+toolName = "run_shell_command"
+commandPrefix = "twine upload"
+decision = "deny"
+priority = 900
+
+# === MEDIUM: Remote Access (ASK_USER) ===
+
+[[rule]]
+toolName = "run_shell_command"
+commandPrefix = "ssh "
+decision = "ask_user"
+priority = 500
+
+[[rule]]
+toolName = "run_shell_command"
+commandPrefix = "scp "
+decision = "ask_user"
+priority = 500
+
+[[rule]]
+toolName = "run_shell_command"
+commandPrefix = "ftp "
+decision = "ask_user"
+priority = 500
+
+[[rule]]
+toolName = "run_shell_command"
+commandPrefix = "sftp "
+decision = "ask_user"
+priority = 500

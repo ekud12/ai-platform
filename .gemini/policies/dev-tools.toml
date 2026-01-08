@@ -1,0 +1,222 @@
+# Development Tools Policies
+# These rules control development tool operations
+
+# === ALLOWED: .NET CLI ===
+
+[[rule]]
+toolName = "run_shell_command"
+commandPrefix = "dotnet build"
+decision = "allow"
+priority = 100
+
+[[rule]]
+toolName = "run_shell_command"
+commandPrefix = "dotnet test"
+decision = "allow"
+priority = 100
+
+[[rule]]
+toolName = "run_shell_command"
+commandPrefix = "dotnet run"
+decision = "allow"
+priority = 100
+
+[[rule]]
+toolName = "run_shell_command"
+commandPrefix = "dotnet restore"
+decision = "allow"
+priority = 100
+
+[[rule]]
+toolName = "run_shell_command"
+commandPrefix = "dotnet clean"
+decision = "allow"
+priority = 100
+
+[[rule]]
+toolName = "run_shell_command"
+commandPrefix = "dotnet --version"
+decision = "allow"
+priority = 100
+
+[[rule]]
+toolName = "run_shell_command"
+commandPrefix = "dotnet --list-sdks"
+decision = "allow"
+priority = 100
+
+[[rule]]
+toolName = "run_shell_command"
+commandPrefix = "dotnet new"
+decision = "allow"
+priority = 200
+
+[[rule]]
+toolName = "run_shell_command"
+commandPrefix = "dotnet add"
+decision = "allow"
+priority = 200
+
+[[rule]]
+toolName = "run_shell_command"
+commandPrefix = "dotnet sln"
+decision = "allow"
+priority = 200
+
+[[rule]]
+toolName = "run_shell_command"
+commandPrefix = "dotnet format"
+decision = "allow"
+priority = 200
+
+# === ALLOWED: NPM/Node ===
+
+[[rule]]
+toolName = "run_shell_command"
+commandPrefix = "npm test"
+decision = "allow"
+priority = 100
+
+[[rule]]
+toolName = "run_shell_command"
+commandPrefix = "npm run "
+decision = "allow"
+priority = 100
+
+[[rule]]
+toolName = "run_shell_command"
+commandPrefix = "npm ci"
+decision = "allow"
+priority = 100
+
+[[rule]]
+toolName = "run_shell_command"
+commandPrefix = "npm install"
+decision = "allow"
+priority = 200
+
+[[rule]]
+toolName = "run_shell_command"
+commandPrefix = "npm ls"
+decision = "allow"
+priority = 100
+
+[[rule]]
+toolName = "run_shell_command"
+commandPrefix = "npm --version"
+decision = "allow"
+priority = 100
+
+[[rule]]
+toolName = "run_shell_command"
+commandPrefix = "node "
+decision = "allow"
+priority = 100
+
+[[rule]]
+toolName = "run_shell_command"
+commandPrefix = "npx "
+decision = "allow"
+priority = 200
+
+[[rule]]
+toolName = "run_shell_command"
+commandPrefix = "pnpm "
+decision = "allow"
+priority = 200
+
+[[rule]]
+toolName = "run_shell_command"
+commandPrefix = "yarn "
+decision = "allow"
+priority = 200
+
+# === ALLOWED: Python ===
+
+[[rule]]
+toolName = "run_shell_command"
+commandPrefix = "python "
+decision = "allow"
+priority = 100
+
+[[rule]]
+toolName = "run_shell_command"
+commandPrefix = "python3 "
+decision = "allow"
+priority = 100
+
+[[rule]]
+toolName = "run_shell_command"
+commandPrefix = "pip install"
+decision = "allow"
+priority = 200
+
+[[rule]]
+toolName = "run_shell_command"
+commandPrefix = "pip list"
+decision = "allow"
+priority = 100
+
+[[rule]]
+toolName = "run_shell_command"
+commandPrefix = "pytest"
+decision = "allow"
+priority = 100
+
+# === ALLOWED: Other Tools ===
+
+[[rule]]
+toolName = "run_shell_command"
+commandPrefix = "make "
+decision = "allow"
+priority = 200
+
+[[rule]]
+toolName = "run_shell_command"
+commandPrefix = "cargo "
+decision = "allow"
+priority = 200
+
+[[rule]]
+toolName = "run_shell_command"
+commandPrefix = "go "
+decision = "allow"
+priority = 200
+
+[[rule]]
+toolName = "run_shell_command"
+commandPrefix = "mvn "
+decision = "allow"
+priority = 200
+
+[[rule]]
+toolName = "run_shell_command"
+commandPrefix = "gradle "
+decision = "allow"
+priority = 200
+
+# === ALLOWED: Utility Commands ===
+
+[[rule]]
+toolName = "run_shell_command"
+commandPrefix = "which "
+decision = "allow"
+priority = 100
+
+[[rule]]
+toolName = "run_shell_command"
+commandPrefix = "where "
+decision = "allow"
+priority = 100
+
+[[rule]]
+toolName = "run_shell_command"
+commandPrefix = "code "
+decision = "allow"
+priority = 100
+
+[[rule]]
+toolName = "run_shell_command"
+commandPrefix = "mkdir "
+decision = "allow"
+priority = 200

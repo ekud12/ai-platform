@@ -1,0 +1,67 @@
+# File Operations Policies
+# These rules control file read/write operations
+
+# === CRITICAL: System File Protection (DENY) ===
+
+[[rule]]
+toolName = ["write_file", "replace", "edit_file"]
+argsPattern = "(/etc/|C:\\\\Windows)"
+decision = "deny"
+priority = 900
+
+[[rule]]
+toolName = ["write_file", "replace", "edit_file"]
+argsPattern = "\\.(env|pem|key|crt|p12|pfx)$"
+decision = "ask_user"
+priority = 700
+
+# === HIGH: Configuration Files (ASK_USER) ===
+
+[[rule]]
+toolName = ["write_file", "replace", "edit_file"]
+argsPattern = "(package\\.json|tsconfig\\.json|\\.csproj)$"
+decision = "ask_user"
+priority = 600
+
+[[rule]]
+toolName = ["write_file", "replace", "edit_file"]
+argsPattern = "(Dockerfile|docker-compose\\.ya?ml)$"
+decision = "ask_user"
+priority = 600
+
+[[rule]]
+toolName = ["write_file", "replace", "edit_file"]
+argsPattern = "(\\.github/|azure-pipelines\\.ya?ml)"
+decision = "ask_user"
+priority = 700
+
+# === MEDIUM: Source Files (ALLOW) ===
+
+[[rule]]
+toolName = ["write_file", "replace", "edit_file"]
+argsPattern = "\\.(cs|ts|tsx|js|jsx|py|go|rs|java)$"
+decision = "allow"
+priority = 200
+
+[[rule]]
+toolName = ["write_file", "replace", "edit_file"]
+argsPattern = "\\.(md|txt|json|yaml|yml|xml|html|css|scss)$"
+decision = "allow"
+priority = 200
+
+# === ALLOWED: Read Operations ===
+
+[[rule]]
+toolName = "read_file"
+decision = "allow"
+priority = 100
+
+[[rule]]
+toolName = "list_directory"
+decision = "allow"
+priority = 100
+
+[[rule]]
+toolName = "search_files"
+decision = "allow"
+priority = 100

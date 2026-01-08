@@ -1,0 +1,202 @@
+# Git Security Policies
+# These rules control git operations
+
+# === CRITICAL: Destructive Git Operations (DENY) ===
+
+[[rule]]
+toolName = "run_shell_command"
+commandRegex = "git\\s+reset\\s+--hard"
+decision = "deny"
+priority = 900
+
+[[rule]]
+toolName = "run_shell_command"
+commandRegex = "git\\s+clean\\s+-[fdx]+"
+decision = "deny"
+priority = 900
+
+[[rule]]
+toolName = "run_shell_command"
+commandRegex = "git\\s+push.*--force"
+decision = "deny"
+priority = 900
+
+[[rule]]
+toolName = "run_shell_command"
+commandRegex = "git\\s+push.*-f\\b"
+decision = "deny"
+priority = 900
+
+# === HIGH: Manual Confirmation Required (ASK_USER) ===
+
+[[rule]]
+toolName = "run_shell_command"
+commandPrefix = "git push"
+decision = "ask_user"
+priority = 700
+
+[[rule]]
+toolName = "run_shell_command"
+commandPrefix = "git commit"
+decision = "ask_user"
+priority = 700
+
+[[rule]]
+toolName = "run_shell_command"
+commandRegex = "git\\s+checkout\\s+\\."
+decision = "ask_user"
+priority = 700
+
+[[rule]]
+toolName = "run_shell_command"
+commandRegex = "git\\s+stash\\s+(drop|clear)"
+decision = "ask_user"
+priority = 700
+
+[[rule]]
+toolName = "run_shell_command"
+commandPrefix = "git rebase"
+decision = "ask_user"
+priority = 600
+
+[[rule]]
+toolName = "run_shell_command"
+commandPrefix = "git merge"
+decision = "ask_user"
+priority = 600
+
+[[rule]]
+toolName = "run_shell_command"
+commandRegex = "git\\s+branch\\s+-[dD]"
+decision = "ask_user"
+priority = 600
+
+[[rule]]
+toolName = "run_shell_command"
+commandRegex = "git\\s+tag\\s+-d"
+decision = "ask_user"
+priority = 600
+
+[[rule]]
+toolName = "run_shell_command"
+commandRegex = "git\\s+remote\\s+(add|remove|set-url)"
+decision = "ask_user"
+priority = 700
+
+[[rule]]
+toolName = "run_shell_command"
+commandRegex = "git\\s+config\\s+--global"
+decision = "deny"
+priority = 800
+
+# === ALLOWED: Read-Only Git Operations ===
+
+[[rule]]
+toolName = "run_shell_command"
+commandPrefix = "git status"
+decision = "allow"
+priority = 100
+
+[[rule]]
+toolName = "run_shell_command"
+commandPrefix = "git diff"
+decision = "allow"
+priority = 100
+
+[[rule]]
+toolName = "run_shell_command"
+commandPrefix = "git log"
+decision = "allow"
+priority = 100
+
+[[rule]]
+toolName = "run_shell_command"
+commandPrefix = "git show"
+decision = "allow"
+priority = 100
+
+[[rule]]
+toolName = "run_shell_command"
+commandPrefix = "git blame"
+decision = "allow"
+priority = 100
+
+[[rule]]
+toolName = "run_shell_command"
+commandRegex = "^git\\s+branch\\s*$"
+decision = "allow"
+priority = 100
+
+[[rule]]
+toolName = "run_shell_command"
+commandRegex = "^git\\s+branch\\s+-[avrl]+"
+decision = "allow"
+priority = 100
+
+[[rule]]
+toolName = "run_shell_command"
+commandRegex = "^git\\s+remote\\s*$"
+decision = "allow"
+priority = 100
+
+[[rule]]
+toolName = "run_shell_command"
+commandRegex = "^git\\s+remote\\s+-v"
+decision = "allow"
+priority = 100
+
+[[rule]]
+toolName = "run_shell_command"
+commandPrefix = "git stash list"
+decision = "allow"
+priority = 100
+
+[[rule]]
+toolName = "run_shell_command"
+commandRegex = "^git\\s+tag\\s*$"
+decision = "allow"
+priority = 100
+
+[[rule]]
+toolName = "run_shell_command"
+commandRegex = "^git\\s+tag\\s+-l"
+decision = "allow"
+priority = 100
+
+# === ALLOWED: Safe Git Operations ===
+
+[[rule]]
+toolName = "run_shell_command"
+commandPrefix = "git add"
+decision = "allow"
+priority = 200
+
+[[rule]]
+toolName = "run_shell_command"
+commandPrefix = "git stash"
+decision = "allow"
+priority = 200
+
+[[rule]]
+toolName = "run_shell_command"
+commandPrefix = "git fetch"
+decision = "allow"
+priority = 200
+
+[[rule]]
+toolName = "run_shell_command"
+commandPrefix = "git pull"
+decision = "allow"
+priority = 200
+
+[[rule]]
+toolName = "run_shell_command"
+commandPrefix = "git checkout -b"
+decision = "allow"
+priority = 200
+
+[[rule]]
+toolName = "run_shell_command"
+commandPrefix = "git switch"
+decision = "allow"
+priority = 200

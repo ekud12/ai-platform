@@ -3,70 +3,34 @@ description = "Plan → Approve → Code → Review → Fix → Complete loop"
 prompt = """
 # PLAN & EXECUTE LOOP
 
-## Agents
-
-### Planner
-@../agents/roles/planner.agent.md
-
-### .NET Coder
-@../agents/roles/coder.dotnet.agent.md
-
-### .NET Reviewer
-@../agents/roles/reviewer.dotnet.agent.md
-
-### TypeScript Coder
-@../agents/roles/coder.typescript.agent.md
-
-### TypeScript Reviewer
-@../agents/roles/reviewer.typescript.agent.md
-
----
-
 ## REQUEST
-
 {{args}}
-
----
 
 ## EXECUTION LOOP
 
 ### 1. PLAN
-Use the **Planner Agent** to analyze the request.
-Output:
-```json
-{
-  "plan": [
-    { "step": 1, "action": "...", "agent": "coder.dotnet|coder.typescript" }
-  ]
-}
-```
+Use the **planner** skill to analyze the request and create an execution plan.
 
 ### 2. APPROVE
 **STOP AND ASK THE USER:**
 "Here is my plan: [summary]. Do you approve? (yes/no/modify)"
 
 - If **no** → ask what to change, go back to step 1
-- If **modify** → adjust plan based on feedback, show again
+- If **modify** → adjust plan, show again
 - If **yes** → proceed to step 3
 
 ### 3. CODE
-Use the appropriate **Coder Agent** to implement each step in the plan.
-Follow ALL rules loaded by that agent.
+Use **coder-dotnet** or **coder-typescript** skill based on the code type.
 
 ### 4. REVIEW
-Use the appropriate **Reviewer Agent** to check against ALL compiled rules.
-Output violations:
-```
-FAIL: <rule-id> (line N) - <issue>
-```
+Use **reviewer-dotnet** or **reviewer-typescript** skill to check against all rules.
 
 ### 5. DECISION
 - If ANY critical/major violations → go to step 6
 - If PASS → go to step 7
 
 ### 6. FIX
-Fix the violations. Go back to step 4 (REVIEW).
-Max 5 iterations.
+Fix the violations. Go back to step 4 (max 5 iterations).
 
 ### 7. COMPLETE
 ```json
@@ -77,9 +41,6 @@ Max 5 iterations.
 }
 ```
 
----
-
 ## BEGIN
-
 Start with PLAN.
 """
