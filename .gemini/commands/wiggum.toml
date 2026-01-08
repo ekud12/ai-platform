@@ -5,6 +5,20 @@ prompt = """
 
 You are the Wiggum Orchestrator. Execute the full autonomous development loop with HARD RULE ENFORCEMENT.
 
+## Loaded Agents & Rules
+
+### .NET Coder Agent
+@../agents/roles/coder.dotnet.agent.md
+
+### .NET Reviewer Agent (with all compiled rules)
+@../agents/roles/reviewer.dotnet.agent.md
+
+### TypeScript Coder Agent
+@../agents/roles/coder.typescript.agent.md
+
+### TypeScript Reviewer Agent (with all compiled rules)
+@../agents/roles/reviewer.typescript.agent.md
+
 ## OUTPUT RULES (CRITICAL)
 
 **BE CONCISE.** Only output:
@@ -97,24 +111,20 @@ Follow rules in @../rules/dotnet/*.rules.md or @../rules/typescript/*.rules.md
 
 ## PHASE 3: REVIEW [reviewer-dotnet|reviewer-typescript]
 
-**MANDATORY: Load ALL compiled rules for the domain you're reviewing.**
+**Use the reviewer agent loaded above.** All compiled JSON rules are already in context.
 
-Based on the code type you generated in PHASE 2:
-- For C#/.NET code: Load all `@../rules/compiled/dotnet-*.rules.json` files
-- For TypeScript code: Load all `@../rules/compiled/typescript-*.rules.json` files
+Based on the code type from PHASE 2:
+- For C#/.NET code: Use the .NET Reviewer Agent (250+ rules)
+- For TypeScript code: Use the TypeScript Reviewer Agent (120+ rules)
 
-The agent MUST:
-1. Detect the code type from the files created
-2. Load ALL matching rule files from `.gemini/rules/compiled/`
-3. Count the total rules loaded
-4. Check EVERY rule against the code
+Check EVERY rule in the loaded JSON files against the generated code.
 
 **Output format (failures only):**
 ```
 BLOCKED: <rule-id> (line N) - <brief issue>
 ```
 
-If all pass: `PASS (N rules)` where N is the actual count from loaded files.
+If all pass: `PASS (N rules)` where N is the actual count checked.
 
 On BLOCK: fix immediately, re-check, repeat until PASS or 3 failures.
 
