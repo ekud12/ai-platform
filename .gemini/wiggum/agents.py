@@ -20,6 +20,7 @@ except ImportError:
 
 from .config import WiggumConfig
 from .tools import WiggumTools, ToolResult
+from .rule_loader import RuleLoader
 
 
 @dataclass
@@ -268,18 +269,71 @@ class AgentInvoker:
                 print(f"    [ERROR] Planner failed: {str(e)}")
             return None
 
-    def invoke_reviewer(self, agent_name: str, code_changes: str, task: str) -> dict:
+    def invoke_reviewer(self, agent_name: str, code_changes: str, task: str, files: list[str] = None) -> dict:
         """
         Invoke a reviewer agent to validate code changes.
+
+        Uses compiled JSON rules via RuleLoader for structured enforcement.
 
         Args:
             agent_name: Reviewer agent name (e.g., 'reviewer-dotnet')
             code_changes: The code that was written/modified
             task: Original task description
+            files: List of files being reviewed (for rule matching)
 
         Returns:
-            Review result dict with status, issues, etc.
+            Review result dict with status, issues, rules_checked count, etc.
         """
+        # Load compiled rules based on file types
+        rule_loader = RuleLoader()
+        all_rules = []
+
+        # Determine file extension to load appropriate rules
+        if files:
+            for filename in files:
+                rulesets = rule_loader.load_for_file(filename)
+                for rs in rulesets:
+                    all_rules.extend(rs.rules)
+        else:
+            # Fallback: load by domain from agent name
+            domain = "dotnet" if "dotnet" in agent_name else "typescript"
+            rulesets = rule_loader.load_for_domain(domain)
+            for rs in rulesets:
+                all_rules.extend(rs.rules)
+
+        # Deduplicate rules by ID
+        seen = set()
+        unique_rules = []
+        for rule in all_rules:
+            if rule.id not in seen:
+                seen.add(rule.id)
+                unique_rules.append(rule)
+
+        rules_count = len(unique_rules)
+
+        # Build structured rules prompt
+        blocking_rules = [r for r in unique_rules if r.is_blocking]
+        warning_rules = [r for r in unique_rules if not r.is_blocking]
+
+        rules_prompt = f"""
+## BLOCKING RULES ({len(blocking_rules)} rules) - MUST ALL PASS
+"""
+        for rule in blocking_rules:
+            rules_prompt += f"""
+### {rule.id}: {rule.title}
+- Severity: {rule.severity.upper()}
+- Check: {rule.check}
+"""
+            if rule.bad_example:
+                rules_prompt += f"- Bad Example: `{rule.bad_example[:100]}...`\n"
+
+        rules_prompt += f"""
+
+## WARNING RULES ({len(warning_rules)} rules) - SHOULD PASS
+"""
+        for rule in warning_rules:
+            rules_prompt += f"- **{rule.id}**: {rule.title} ({rule.check})\n"
+
         model = genai.GenerativeModel(
             model_name=self.config.model_name,
             system_instruction=self.load_agent(agent_name),
@@ -293,19 +347,25 @@ ORIGINAL TASK:
 CODE CHANGES TO REVIEW:
 {code_changes}
 
-Review the code against all applicable rules and provide your verdict.
+{rules_prompt}
+
+Review the code against ALL {rules_count} rules above and provide your verdict.
+For each rule violation found, cite the specific rule ID.
 """
 
         try:
             response = model.generate_content(prompt)
             clean = response.text.replace("```json", "").replace("```", "").strip()
-            return json.loads(clean)
+            result = json.loads(clean)
+            result["rules_checked"] = rules_count
+            return result
 
         except Exception as e:
             return {
                 "status": "ERROR",
                 "error": str(e),
-                "issues": []
+                "issues": [],
+                "rules_checked": rules_count
             }
 
     def invoke_meta(self, all_changes: str, all_reviews: list[dict]) -> dict:

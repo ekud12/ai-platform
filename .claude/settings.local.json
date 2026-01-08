@@ -19,7 +19,7 @@
       "Bash(gemini --help:*)",
       "Bash(gemini:*)",
       "Bash(python:*)",
-      "Bash(for f in docs/README.AGENTS.md docs/README.HOW-IT-WORKS.md docs/README.RULEBOOKS.md docs/README.GOVERNANCE.md memory/lessons.md memory/architecture.map.md rules/constitution/constitution.rules.md agents/_base/agent.contract.md)",
+      "Bash(for f in .gemmem/README.AGENTS.md .gemmem/README.HOW-IT-WORKS.md .gemmem/README.RULEBOOKS.md .gemmem/README.GOVERNANCE.md .gemmem/lessons.md .gemmem/architecture.map.md rules/constitution/constitution.rules.md agents/_base/agent.contract.md)",
       "Bash(do if [ -f \"$f\" ])",
       "Bash(then echo \"OK: $f\")",
       "Bash(else echo \"MISSING: $f\")",
@@ -31,7 +31,8 @@
       "Bash(echo:*)",
       "Bash(test:*)",
       "Bash(grep:*)",
-      "Bash(rm:*)"
+      "Bash(rm:*)",
+      "Bash(ls:*)"
     ]
   }
 }

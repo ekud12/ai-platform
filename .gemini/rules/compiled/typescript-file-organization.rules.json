@@ -1,0 +1,191 @@
+{
+  "id": "typescript-file-organization",
+  "version": "1.0.0",
+  "domain": "typescript",
+  "applies_to": [
+    "*.ts",
+    "*.tsx"
+  ],
+  "rules": [
+    {
+      "id": "TS-FILE-001",
+      "title": "Project Root Structure",
+      "severity": "major",
+      "check": "Projects MUST follow standard folder layout at root level.",
+      "bad_example": "app.ts\nutils.ts\norder.ts\npackage.json",
+      "good_example": "src/\n  features/\n  shared/\n  main.ts\ntests/\n  unit/\n  integration/\ndist/\npackage.json\ntsconfig.json",
+      "rationale": "Standard structure enables quick navigation and tooling configuration."
+    },
+    {
+      "id": "TS-FILE-002",
+      "title": "Source Organization",
+      "severity": "major",
+      "check": "Source code MUST be in src/ with clear separation of features and shared code.",
+      "good_example": "src/\n  features/\n    orders/\n    users/\n    payments/\n  shared/\n    utils/\n    logger/\n    config/\n  main.ts\n  app.ts",
+      "rationale": "Feature/shared separation enforces proper module boundaries."
+    },
+    {
+      "id": "TS-FILE-003",
+      "title": "File Naming with Suffix",
+      "severity": "major",
+      "check": "Files MUST use kebab-case with purpose suffix indicating type.  **Standard Suffixes** - .service.ts - Business logic services - .controller.ts - HTTP controllers/handlers - .repository.ts - Data access layer - .types.ts - Type definitions - .schema.ts - Validation schemas (zod, etc.) - .guard.ts - Auth/validation guards - .middleware.ts - Express/Fastify middleware - .test.ts or .spec.ts - Test files - .mock.ts - Mock implementations - .constants.ts - Constant values",
+      "bad_example": "OrderService.ts\norders.ts\norderHelpers.ts",
+      "good_example": "order.service.ts\norder.controller.ts\norder.types.ts\norder.schema.ts\norder.service.test.ts",
+      "rationale": "Suffixes immediately communicate file purpose without opening it."
+    },
+    {
+      "id": "TS-FILE-004",
+      "title": "Type File Organization",
+      "severity": "major",
+      "check": "Types MUST be organized by scope: local types co-located, shared types in types/ folder.",
+      "bad_example": "types/\n  everything.ts  // All types in one file",
+      "good_example": "src/\n  features/orders/\n    order.types.ts          // Order-specific types\n    order.service.ts        // Uses local types\n  shared/\n    types/\n      common.types.ts       // Shared types (Result, Pagination)\n      api.types.ts          // API response types\n      index.ts              // Re-exports public types",
+      "rationale": "Co-located types reduce navigation; shared types prevent duplication."
+    },
+    {
+      "id": "TS-FILE-005",
+      "title": "Barrel Export Files",
+      "severity": "major",
+      "check": "Use index.ts only for explicit public API exports. No export * patterns.",
+      "bad_example": "// features/orders/index.ts\nexport * from './order.service';\nexport * from './order.repository';\nexport * from './internal-utils'; // Leaks internals",
+      "good_example": "// features/orders/index.ts\nexport { OrderService } from './order.service';\nexport { OrderController } from './order.controller';\nexport type { Order, OrderDto, CreateOrderRequest } from './order.types';",
+      "rationale": "Explicit exports define clear module boundaries and prevent accidental exposure."
+    },
+    {
+      "id": "TS-FILE-006",
+      "title": "Test File Co-location",
+      "severity": "info",
+      "check": "Unit tests SHOULD be co-located with source or in parallel __tests__ directory.  **Pattern A - Co-located** `` src/features/orders/   order.service.ts   order.service.test.ts   order.controller.ts   order.controller.test.ts `  **Pattern B - Parallel Directory** ` src/features/orders/   order.service.ts   __tests__/     order.service.test.ts ``",
+      "rationale": "Co-located tests are easier to find and maintain alongside source code."
+    },
+    {
+      "id": "TS-FILE-007",
+      "title": "Integration Test Separation",
+      "severity": "major",
+      "check": "Integration and E2E tests MUST be in separate top-level folders.",
+      "good_example": "tests/\n  unit/              # Or co-located with source\n  integration/\n    database.test.ts\n    api.test.ts\n  e2e/\n    user-journey.test.ts\n  fixtures/\n    test-data.json\n  helpers/\n    test-utils.ts",
+      "rationale": "Separation enables different test configurations and run strategies."
+    },
+    {
+      "id": "TS-FILE-008",
+      "title": "Import Organization",
+      "severity": "major",
+      "check": "Imports MUST be organized in groups: external, internal, relative.",
+      "bad_example": "import { OrderService } from './order.service';\nimport express from 'express';\nimport { logger } from '@/shared/logger';\nimport type { Request } from 'express';\nimport { z } from 'zod';",
+      "good_example": "// External packages\nimport express from 'express';\nimport type { Request, Response } from 'express';\nimport { z } from 'zod';\n\n// Internal absolute imports\nimport { logger } from '@/shared/logger';\nimport { config } from '@/shared/config';\n\n// Relative imports\nimport { OrderService } from './order.service';\nimport type { Order } from './order.types';",
+      "rationale": "Organized imports are easier to scan and maintain."
+    },
+    {
+      "id": "TS-FILE-009",
+      "title": "Type-Only Imports",
+      "severity": "major",
+      "check": "Use import type for type-only imports to enable better tree-shaking.",
+      "bad_example": "import { Order, OrderService } from './order';\n// If Order is only used as type, OrderService gets imported unnecessarily",
+      "good_example": "import type { Order } from './order.types';\nimport { OrderService } from './order.service';",
+      "rationale": "Type-only imports are erased at compile time and don't affect bundle."
+    },
+    {
+      "id": "TS-FILE-010",
+      "title": "Entry Point Files",
+      "severity": "major",
+      "check": "Entry points (index.ts, main.ts, app.ts) MUST only contain orchestration, not logic.",
+      "bad_example": "// main.ts - too much logic\nimport express from 'express';\n\nconst app = express();\n\napp.get('/orders', async (req, res) => {\n  // 50 lines of order logic here\n});\n\napp.listen(3000);",
+      "good_example": "// main.ts - orchestration only\nimport { createApp } from './app';\nimport { config } from './config';\nimport { logger } from './shared/logger';\n\nasync function bootstrap(): Promise<void> {\n  const app = await createApp();\n\n  app.listen(config.port, () => {\n    logger.info('Server started', { port: config.port });\n  });\n}\n\nbootstrap().catch(console.error);",
+      "rationale": "Clean entry points are testable and clearly show application structure."
+    },
+    {
+      "id": "TS-FILE-011",
+      "title": "Shared Folder Structure",
+      "severity": "major",
+      "check": "Shared code MUST be organized by concern, not dumped in generic folders.",
+      "bad_example": "shared/\n  utils.ts       // Everything dumped here\n  helpers.ts     // Vague naming\n  common.ts      // Catch-all",
+      "good_example": "shared/\n  config/\n    index.ts\n    env.schema.ts\n  logger/\n    index.ts\n    logger.service.ts\n  http/\n    http.client.ts\n    http.types.ts\n  validation/\n    validators.ts\n  errors/\n    app.error.ts\n    error.types.ts",
+      "rationale": "Organized shared code is discoverable and maintainable."
+    },
+    {
+      "id": "TS-FILE-012",
+      "title": "Package.json Configuration",
+      "severity": "critical",
+      "check": "All package.json files MUST be explicit with complete metadata.",
+      "bad_example": "{\n  \"name\": \"app\",\n  \"scripts\": {\n    \"start\": \"node dist/main.js\"\n  }\n}",
+      "good_example": "{\n  \"name\": \"@company/order-service\",\n  \"version\": \"1.0.0\",\n  \"description\": \"Order management service\",\n  \"type\": \"module\",\n  \"main\": \"dist/main.js\",\n  \"types\": \"dist/main.d.ts\",\n  \"engines\": {\n    \"node\": \">=20.0.0\"\n  },\n  \"scripts\": {\n    \"build\": \"tsc\",\n    \"start\": \"node dist/main.js\",\n    \"dev\": \"tsx watch src/main.ts\",\n    \"test\": \"vitest run\",\n    \"test:watch\": \"vitest\",\n    \"lint\": \"eslint src/\",\n    \"format\": \"prettier --write src/\"\n  },\n  \"exports\": {\n    \".\": {\n      \"types\": \"./dist/index.d.ts\",\n      \"import\": \"./dist/index.js\"\n    }\n  },\n  \"files\": [\"dist\"],\n  \"author\": \"Company\",\n  \"license\": \"MIT\"\n}",
+      "rationale": "Complete package.json enables proper publishing, tooling, and documentation."
+    },
+    {
+      "id": "TS-FILE-013",
+      "title": "Monorepo Package Structure",
+      "severity": "major",
+      "check": "Monorepos MUST have clear package boundaries with apps/ and packages/ separation.",
+      "good_example": "apps/\n  web/\n    package.json\n    src/\n  api/\n    package.json\n    src/\npackages/\n  shared/\n    package.json\n    src/\n  ui/\n    package.json\n    src/\npackage.json\nturbo.json",
+      "rationale": "Clear separation enables independent versioning and deployment."
+    },
+    {
+      "id": "TS-FILE-014",
+      "title": "Declaration Files",
+      "severity": "info",
+      "check": "Custom type declarations MUST be in @types/ or types/ folder with .d.ts extension.",
+      "good_example": "src/\n  @types/\n    global.d.ts           // Global type extensions\n    env.d.ts              // Environment type declarations\n    express.d.ts          // Module augmentations\n  types/\n    api.types.ts          // Application types (not declarations)",
+      "rationale": "Separate declaration files from runtime type definitions."
+    },
+    {
+      "id": "TS-FILE-FORBID-001",
+      "title": "No mixed case file names (use kebab-case only)",
+      "severity": "critical",
+      "check": "FORBIDDEN: No mixed case file names (use kebab-case only)"
+    },
+    {
+      "id": "TS-FILE-FORBID-002",
+      "title": "No default exports",
+      "severity": "critical",
+      "check": "FORBIDDEN: No default exports"
+    },
+    {
+      "id": "TS-FILE-FORBID-003",
+      "title": "No `export *` barrel exports",
+      "severity": "critical",
+      "check": "FORBIDDEN: No `export *` barrel exports"
+    },
+    {
+      "id": "TS-FILE-FORBID-004",
+      "title": "No deeply nested folders (max 4 levels in src)",
+      "severity": "critical",
+      "check": "FORBIDDEN: No deeply nested folders (max 4 levels in src)"
+    },
+    {
+      "id": "TS-FILE-FORBID-005",
+      "title": "No `utils.ts` or `helpers.ts` as catch-all",
+      "severity": "critical",
+      "check": "FORBIDDEN: No `utils.ts` or `helpers.ts` as catch-all"
+    },
+    {
+      "id": "TS-FILE-FORBID-006",
+      "title": "No logic in index.ts files",
+      "severity": "critical",
+      "check": "FORBIDDEN: No logic in index.ts files"
+    },
+    {
+      "id": "TS-FILE-FORBID-007",
+      "title": "No circular imports between modules",
+      "severity": "critical",
+      "check": "FORBIDDEN: No circular imports between modules"
+    },
+    {
+      "id": "TS-FILE-FORBID-008",
+      "title": "No relative imports crossing feature boundaries",
+      "severity": "critical",
+      "check": "FORBIDDEN: No relative imports crossing feature boundaries"
+    },
+    {
+      "id": "TS-FILE-FORBID-009",
+      "title": "No minimal package.json without required fields",
+      "severity": "critical",
+      "check": "FORBIDDEN: No minimal package.json without required fields"
+    },
+    {
+      "id": "TS-FILE-FORBID-010",
+      "title": "No business logic in entry point files",
+      "severity": "critical",
+      "check": "FORBIDDEN: No business logic in entry point files"
+    }
+  ]
+}

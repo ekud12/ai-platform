@@ -7,12 +7,18 @@ This is the main brain of the autonomous agent system.
 
 import json
 import time
+import subprocess
+import sys
 from pathlib import Path
 from typing import Optional, Callable
 from dataclasses import dataclass, field
 from datetime import datetime
 
 from .config import WiggumConfig
+
+# Add lib directory for path resolver
+sys.path.insert(0, str(Path(__file__).parent.parent / 'lib'))
+from paths import paths as _paths
 from .tools import WiggumTools
 from .agents import AgentInvoker, AgentResponse
 from .rate_limiter import AdaptiveRateLimiter
@@ -88,6 +94,85 @@ class Wiggum:
         self._all_files_changed: list[str] = []
         self._all_reviews: list[dict] = []
         self._errors: list[str] = []
+
+        # Execute CLI hooks for consistency
+        self._execute_hook('before-agent')
+
+    def _execute_hook(self, hook_name: str, context: dict = None) -> dict:
+        """
+        Execute a CLI hook script.
+
+        Wiggum respects the same hooks as the Gemini CLI:
+        - before-agent.js: Pre-agent checks (panic, compile rules, OS sync)
+        - after-agent.js: Post-agent tasks (update architecture map, lessons)
+        - before-tool.js: Pre-tool validation (optional, per-tool)
+
+        Args:
+            hook_name: Name of hook (before-agent, after-agent, before-tool)
+            context: Optional context to pass to hook via stdin
+
+        Returns:
+            Hook result dict with 'decision' and 'reason' keys
+        """
+        hook_script = _paths.resolve_gemini(f'hooks/{hook_name}.js')
+
+        if not hook_script.exists():
+            if self.config.verbose:
+                print(f"[wiggum] Hook not found: {hook_name}.js")
+            return {'decision': 'allow', 'reason': 'Hook not found'}
+
+        try:
+            # Set environment for hook
+            env = {
+                **dict(subprocess.os.environ),
+                'GEMINI_PROJECT_DIR': str(self.config.workspace_root),
+                'WORKSPACE_ROOT': str(self.config.workspace_root),
+            }
+
+            result = subprocess.run(
+                ['node', str(hook_script)],
+                capture_output=True,
+                text=True,
+                timeout=30,
+                env=env,
+                cwd=str(self.config.workspace_root),
+                input=json.dumps(context) if context else None
+            )
+
+            # Parse hook output (JSON on last line)
+            output_lines = result.stdout.strip().split('\n')
+            if output_lines:
+                try:
+                    hook_result = json.loads(output_lines[-1])
+
+                    if self.config.verbose:
+                        print(f"[wiggum] Hook {hook_name}: {hook_result.get('reason', 'OK')}")
+
+                    # Check for block decision
+                    if hook_result.get('decision') == 'block':
+                        raise RuntimeError(f"Hook {hook_name} blocked: {hook_result.get('reason')}")
+
+                    return hook_result
+                except json.JSONDecodeError:
+                    pass
+
+            # Log stderr if any (hook diagnostics)
+            if result.stderr and self.config.verbose:
+                for line in result.stderr.strip().split('\n'):
+                    print(f"[hook:{hook_name}] {line}")
+
+            return {'decision': 'allow', 'reason': 'Hook completed'}
+
+        except subprocess.TimeoutExpired:
+            if self.config.verbose:
+                print(f"[wiggum] Warning: hook {hook_name} timed out")
+            return {'decision': 'allow', 'reason': 'Hook timed out'}
+        except RuntimeError:
+            raise  # Re-raise block errors
+        except Exception as e:
+            if self.config.verbose:
+                print(f"[wiggum] Warning: hook {hook_name} failed: {e}")
+            return {'decision': 'allow', 'reason': f'Hook error: {e}'}
 
     def _log(self, message: str, level: str = "INFO"):
         """Log a message."""
@@ -300,7 +385,8 @@ class Wiggum:
                     review_result = self.agents.invoke_reviewer(
                         reviewer_agent,
                         code_changes=changes_summary,
-                        task=instruction
+                        task=instruction,
+                        files=coder_response.files_changed
                     )
 
                     self._all_reviews.append({
@@ -362,39 +448,18 @@ class Wiggum:
                 # Don't fail for meta errors
 
         # ============================================
-        # PHASE 5: MEMORY COMMIT
+        # PHASE 5: MEMORY COMMIT (via after-agent hook)
         # ============================================
         self._log("PHASE 5: Memory Commit", "PHASE")
 
-        # Update lessons learned
-        if self._all_files_changed:
-            lessons_file = self.config.workspace_root / "docs" / "LESSONS.md"
-            if lessons_file.exists():
-                timestamp = datetime.now().strftime("%Y-%m-%d %H:%M")
-                lesson_entry = f"\n## Wiggum Run - {timestamp}\n"
-                lesson_entry += f"- Spec: {spec_file.name}\n"
-                lesson_entry += f"- Steps: {len(steps)}\n"
-                lesson_entry += f"- Files: {', '.join(self._all_files_changed[:5])}\n"
-
-                if not self.config.dry_run:
-                    with open(lessons_file, "a") as f:
-                        f.write(lesson_entry)
-                    self._log("Updated LESSONS.md", "OK")
-
-        # Regenerate architecture map
-        map_script = self.config.gemini_root / "tools" / "generate-map.js"
-        if map_script.exists() and not self.config.dry_run:
-            import subprocess
-            try:
-                subprocess.run(
-                    ["node", str(map_script)],
-                    cwd=str(self.config.workspace_root),
-                    capture_output=True,
-                    timeout=30
-                )
-                self._log("Updated ARCHITECTURE.md", "OK")
-            except:
-                pass  # Non-critical
+        # Execute after-agent hook (updates architecture map, lessons, etc.)
+        if not self.config.dry_run:
+            self._execute_hook('after-agent', {
+                'files_changed': self._all_files_changed,
+                'spec': spec_file.name,
+                'steps': len(steps)
+            })
+            self._log("After-agent hook completed", "OK")
 
         # ============================================
         # DONE

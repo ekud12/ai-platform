@@ -1,0 +1,215 @@
+{
+  "id": "dotnet-naming",
+  "version": "1.0.0",
+  "domain": "dotnet",
+  "applies_to": [
+    "*.cs",
+    "*.csx"
+  ],
+  "rules": [
+    {
+      "id": "CS-NAME-001",
+      "title": "Namespace Naming",
+      "severity": "major",
+      "check": "Namespaces MUST use PascalCase and follow Company.Product.Feature pattern.",
+      "bad_example": "namespace myApp.services.orders; // lowercase\nnamespace MyApp_Services_Orders; // underscores",
+      "good_example": "namespace MyCompany.OrderSystem.Orders;\nnamespace MyCompany.OrderSystem.Orders.Handlers;",
+      "rationale": "Consistent namespace naming enables predictable code organization and discovery."
+    },
+    {
+      "id": "CS-NAME-002",
+      "title": "Class and Struct Naming",
+      "severity": "major",
+      "check": "Classes and structs MUST use PascalCase noun phrases describing their responsibility.",
+      "bad_example": "public class orderProcessor { } // camelCase\npublic class ProcessOrders { } // verb phrase\npublic class OrderHelper { } // vague",
+      "good_example": "public class OrderProcessor { }\npublic class CustomerValidator { }\npublic class PaymentGateway { }",
+      "rationale": "Clear class names communicate purpose at a glance."
+    },
+    {
+      "id": "CS-NAME-003",
+      "title": "Interface Naming",
+      "severity": "critical",
+      "check": "Interfaces MUST prefix with I and use capability-focused names.",
+      "bad_example": "public interface PaymentProcessor { } // Missing I prefix\npublic interface IStripePaymentImplementation { } // Implementation detail",
+      "good_example": "public interface IPaymentProcessor { }\npublic interface IOrderRepository { }\npublic interface INotificationService { }",
+      "rationale": "I-prefix instantly identifies interfaces. Capability focus enables multiple implementations."
+    },
+    {
+      "id": "CS-NAME-004",
+      "title": "Method Naming",
+      "severity": "major",
+      "check": "Methods MUST use PascalCase verb phrases describing the action.",
+      "bad_example": "public void orderProcess() { } // camelCase\npublic void Order() { } // noun only\npublic void DoIt() { } // vague",
+      "good_example": "public void ProcessOrder() { }\npublic Order CreateOrder() { }\npublic bool ValidateCustomer() { }\npublic async Task<Order> GetOrderByIdAsync() { }",
+      "rationale": "Verb phrases clearly communicate method behavior."
+    },
+    {
+      "id": "CS-NAME-005",
+      "title": "Async Method Suffix",
+      "severity": "critical",
+      "check": "All async methods MUST end with Async suffix. No exceptions.",
+      "bad_example": "public async Task<Order> GetOrder(int id) { } // Missing Async\npublic async Task ProcessPayment() { } // Missing Async",
+      "good_example": "public async Task<Order> GetOrderAsync(int id) { }\npublic async Task ProcessPaymentAsync() { }\npublic async ValueTask<bool> ValidateAsync() { }",
+      "rationale": "Async suffix prevents accidental blocking calls and signals async behavior."
+    },
+    {
+      "id": "CS-NAME-006",
+      "title": "Property Naming",
+      "severity": "major",
+      "check": "Properties MUST use PascalCase nouns or adjectives. No Get prefix.",
+      "bad_example": "public string firstName { get; set; } // camelCase\npublic string GetName { get; } // Get prefix\npublic List<Order> order { get; } // singular for collection",
+      "good_example": "public string FirstName { get; set; }\npublic string Name { get; }\npublic List<Order> Orders { get; } // plural for collection\npublic bool IsActive { get; }\npublic int TotalAmount { get; }",
+      "rationale": "Property names should read naturally when accessed."
+    },
+    {
+      "id": "CS-NAME-007",
+      "title": "Boolean Naming",
+      "severity": "major",
+      "check": "Boolean properties and variables MUST use Is, Has, Can, Should, or Was prefix.",
+      "bad_example": "public bool Active { get; set; }\npublic bool Enabled { get; set; }\npublic bool Valid { get; set; }",
+      "good_example": "public bool IsActive { get; set; }\npublic bool IsEnabled { get; set; }\npublic bool IsValid { get; set; }\npublic bool HasPermission { get; set; }\npublic bool CanExecute { get; set; }\npublic bool ShouldRetry { get; set; }",
+      "rationale": "Prefixes make boolean intent clear and code more readable."
+    },
+    {
+      "id": "CS-NAME-008",
+      "title": "Private Field Naming",
+      "severity": "major",
+      "check": "Private fields MUST use _camelCase with underscore prefix.",
+      "bad_example": "private readonly ILogger logger; // no prefix\nprivate readonly ILogger _Logger; // PascalCase\nprivate readonly ILogger m_logger; // Hungarian",
+      "good_example": "private readonly ILogger _logger;\nprivate readonly IDbContext _dbContext;\nprivate int _retryCount;",
+      "rationale": "Underscore prefix distinguishes fields from parameters and locals."
+    },
+    {
+      "id": "CS-NAME-009",
+      "title": "Constant Naming",
+      "severity": "major",
+      "check": "Public constants MUST use PascalCase. Private constants MAY use UPPER_SNAKE_CASE.",
+      "bad_example": "public const int max_retries = 3; // snake_case\npublic const int MAXRETRIES = 3; // no separation",
+      "good_example": "public const int MaxRetries = 3;\npublic const string DefaultConnectionString = \"...\";\n\nprivate const int _MAX_BUFFER_SIZE = 4096;\nprivate const string _DEFAULT_ENCODING = \"UTF-8\";",
+      "rationale": "Public constants follow .NET conventions. Private constants can use traditional constant style."
+    },
+    {
+      "id": "CS-NAME-010",
+      "title": "Parameter and Local Variable Naming",
+      "severity": "major",
+      "check": "Parameters and locals MUST use camelCase. No abbreviations except universally known ones.",
+      "bad_example": "public void Process(int OrderId, string CustName) { } // PascalCase\npublic void Process(int oid, string cn) { } // abbreviations",
+      "good_example": "public void Process(int orderId, string customerName) { }\npublic void Calculate(decimal amount, int quantity) { }\n\n// Acceptable abbreviations\npublic void Configure(int id, string url, HttpClient http) { }",
+      "rationale": "Descriptive names eliminate guesswork about parameter purpose."
+    },
+    {
+      "id": "CS-NAME-011",
+      "title": "Generic Type Parameter Naming",
+      "severity": "info",
+      "check": "Generic type parameters MUST use T prefix with descriptive suffix for complex scenarios.",
+      "bad_example": "public class Repository<Entity> { } // no T prefix\npublic class Cache<K, V> { } // single letters for multiple params",
+      "good_example": "public class Repository<T> { }\npublic class Repository<TEntity> where TEntity : class { }\npublic class Cache<TKey, TValue> { }\npublic interface IHandler<TRequest, TResponse> { }",
+      "rationale": "T-prefix identifies type parameters. Descriptive names clarify purpose."
+    },
+    {
+      "id": "CS-NAME-012",
+      "title": "Enum Naming",
+      "severity": "major",
+      "check": "Enums MUST use PascalCase singular names. Values MUST use PascalCase.",
+      "bad_example": "public enum OrderStatuses { PENDING, IN_PROGRESS } // plural, UPPER_CASE\npublic enum orderStatus { pending, inProgress } // camelCase",
+      "good_example": "public enum OrderStatus\n{\n    Pending,\n    InProgress,\n    Completed,\n    Cancelled\n}\n\n[Flags]\npublic enum FilePermissions // Flags are plural\n{\n    None = 0,\n    Read = 1,\n    Write = 2,\n    Execute = 4\n}",
+      "rationale": "Singular enum names read naturally. Flags use plural to indicate combinability."
+    },
+    {
+      "id": "CS-NAME-013",
+      "title": "Event Naming",
+      "severity": "major",
+      "check": "Events MUST use PascalCase past tense for completed actions, present for in-progress.",
+      "bad_example": "public event EventHandler OrderCreate; // present tense for completed\npublic event EventHandler OnOrderCreated; // On prefix (old style)",
+      "good_example": "public event EventHandler<OrderEventArgs> OrderCreated;\npublic event EventHandler<OrderEventArgs> OrderCreating;\npublic event EventHandler PaymentProcessed;",
+      "rationale": "Tense indicates whether event fires before or after action."
+    },
+    {
+      "id": "CS-NAME-014",
+      "title": "Extension Method Class Naming",
+      "severity": "info",
+      "check": "Extension method classes MUST use {Type}Extensions naming pattern.",
+      "bad_example": "public static class Helpers { } // vague\npublic static class StringUtils { } // Utils suffix",
+      "good_example": "public static class StringExtensions { }\npublic static class EnumerableExtensions { }\npublic static class HttpClientExtensions { }",
+      "rationale": "Consistent naming makes extension methods discoverable."
+    },
+    {
+      "id": "CS-NAME-015",
+      "title": "Test Method Naming",
+      "severity": "major",
+      "check": "Test methods MUST follow Method_Scenario_ExpectedResult pattern.",
+      "bad_example": "[Fact]\npublic void Test1() { }\n\n[Fact]\npublic void OrderTest() { }",
+      "good_example": "[Fact]\npublic void CreateOrder_ValidInput_ReturnsOrder() { }\n\n[Fact]\npublic void CreateOrder_NullCustomer_ThrowsArgumentNullException() { }\n\n[Fact]\npublic void ProcessPayment_InsufficientFunds_ReturnsDeclined() { }",
+      "rationale": "Descriptive test names serve as documentation and failure context."
+    },
+    {
+      "id": "CS-NAME-016",
+      "title": "Record Naming",
+      "severity": "major",
+      "check": "Records MUST use PascalCase with appropriate suffixes for purpose.",
+      "bad_example": "public record orderDto(string Name); // camelCase\npublic record OrderData(string Name); // vague suffix",
+      "good_example": "public record OrderDto(string Id, string CustomerName);\npublic record CreateOrderRequest(string CustomerId, List<OrderItem> Items);\npublic record OrderCreatedEvent(string OrderId, DateTime CreatedAt);\npublic record OrderSummary(string Id, decimal Total);",
+      "rationale": "Suffixes clarify record purpose (DTO, Request, Response, Event, Summary)."
+    },
+    {
+      "id": "CS-NAME-FORBID-001",
+      "title": "No Hungarian notation (strName, intCount)",
+      "severity": "critical",
+      "check": "FORBIDDEN: No Hungarian notation (strName, intCount)"
+    },
+    {
+      "id": "CS-NAME-FORBID-002",
+      "title": "No single-letter names except loop counters and lambdas",
+      "severity": "critical",
+      "check": "FORBIDDEN: No single-letter names except loop counters and lambdas"
+    },
+    {
+      "id": "CS-NAME-FORBID-003",
+      "title": "No abbreviations unless universally known (Id, Url, Http, Xml, Json)",
+      "severity": "critical",
+      "check": "FORBIDDEN: No abbreviations unless universally known (Id, Url, Http, Xml, Json)"
+    },
+    {
+      "id": "CS-NAME-FORBID-004",
+      "title": "No `Get` prefix on properties",
+      "severity": "critical",
+      "check": "FORBIDDEN: No `Get` prefix on properties"
+    },
+    {
+      "id": "CS-NAME-FORBID-005",
+      "title": "No underscores in public identifiers",
+      "severity": "critical",
+      "check": "FORBIDDEN: No underscores in public identifiers"
+    },
+    {
+      "id": "CS-NAME-FORBID-006",
+      "title": "No inconsistent casing within project",
+      "severity": "critical",
+      "check": "FORBIDDEN: No inconsistent casing within project"
+    },
+    {
+      "id": "CS-NAME-FORBID-007",
+      "title": "No generic names without context (Manager, Handler, Helper, Utils)",
+      "severity": "critical",
+      "check": "FORBIDDEN: No generic names without context (Manager, Handler, Helper, Utils)"
+    },
+    {
+      "id": "CS-NAME-FORBID-008",
+      "title": "No async methods without Async suffix",
+      "severity": "critical",
+      "check": "FORBIDDEN: No async methods without Async suffix"
+    },
+    {
+      "id": "CS-NAME-FORBID-009",
+      "title": "No bool properties without Is/Has/Can/Should prefix",
+      "severity": "critical",
+      "check": "FORBIDDEN: No bool properties without Is/Has/Can/Should prefix"
+    },
+    {
+      "id": "CS-NAME-FORBID-010",
+      "title": "No numbered suffixes (Handler1, Handler2)",
+      "severity": "critical",
+      "check": "FORBIDDEN: No numbered suffixes (Handler1, Handler2)"
+    }
+  ]
+}

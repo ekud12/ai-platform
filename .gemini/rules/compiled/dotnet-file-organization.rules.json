@@ -1,0 +1,206 @@
+{
+  "id": "dotnet-file-organization",
+  "version": "1.0.0",
+  "domain": "dotnet",
+  "applies_to": [
+    "*.cs",
+    "*.csx"
+  ],
+  "rules": [
+    {
+      "id": "CS-FILE-001",
+      "title": "Folder Naming Convention",
+      "severity": "critical",
+      "check": "All folder names MUST use PascalCase (capital first letter). No lowercase folders.",
+      "bad_example": "src/\n  services/\n  models/\n  features/orders/",
+      "good_example": "src/\n  Services/\n  Models/\n  Orders/\n  Users/",
+      "rationale": "PascalCase folders match .NET namespace conventions and maintain consistency."
+    },
+    {
+      "id": "CS-FILE-002",
+      "title": "Solution Structure",
+      "severity": "major",
+      "check": "Solutions MUST organize projects in standard folders: src/, tests/, optionally tools/, docs/.",
+      "bad_example": "MyApp.sln\nMyApp.Api/\nMyApp.Core/\nMyApp.Tests/",
+      "good_example": "MyApp.sln\nsrc/\n  MyApp.Api/\n  MyApp.Core/\n  MyApp.Infrastructure/\ntests/\n  MyApp.Api.Tests/\n  MyApp.Core.Tests/\ndocs/\ntools/",
+      "rationale": "Standard structure enables predictable navigation and build configurations."
+    },
+    {
+      "id": "CS-FILE-003",
+      "title": "Project Naming",
+      "severity": "major",
+      "check": "Projects MUST follow Company.Product.Layer naming pattern.",
+      "bad_example": "Api.csproj\nCore.csproj\nData.csproj",
+      "good_example": "MyCompany.OrderSystem.Api.csproj\nMyCompany.OrderSystem.Core.csproj\nMyCompany.OrderSystem.Infrastructure.csproj\nMyCompany.OrderSystem.Contracts.csproj",
+      "rationale": "Qualified names prevent conflicts and clarify ownership."
+    },
+    {
+      "id": "CS-FILE-004",
+      "title": "Domain-First Organization",
+      "severity": "major",
+      "check": "Organize by domain/feature, not by technical layer. No Features/ wrapper folder.",
+      "bad_example": "Features/\n  Orders/\n  Users/\nControllers/\nServices/\nRepositories/",
+      "good_example": "Orders/\n  OrderController.cs\n  OrderService.cs\n  OrderRepository.cs\n  OrderDto.cs\nUsers/\n  UserController.cs\n  UserService.cs",
+      "rationale": "Domain-first organization keeps related code together and reduces navigation."
+    },
+    {
+      "id": "CS-FILE-005",
+      "title": "Primitives Project",
+      "severity": "major",
+      "check": "Shared base types MUST live in a *.Primitives or *.Contracts project with no dependencies.",
+      "bad_example": "// Shared types scattered across projects\nMyApp.Api/Models/EntityBase.cs\nMyApp.Core/Common/Result.cs\nMyApp.Infrastructure/Interfaces/IIdentifiable.cs",
+      "good_example": "MyCompany.OrderSystem.Primitives/\n  Entities/EntityBase.cs\n  ValueObjects/Money.cs\n  Interfaces/IIdentifiable.cs\n  Results/Result.cs\n  Enums/OrderStatus.cs",
+      "rationale": "Leaf dependency project prevents circular references and centralizes shared types."
+    },
+    {
+      "id": "CS-FILE-006",
+      "title": "File-Type Matching",
+      "severity": "critical",
+      "check": "File names MUST exactly match the primary type name.",
+      "bad_example": "OrderModels.cs       // Contains Order class\nUserServiceImpl.cs   // Contains UserService class\nDtos.cs              // Contains multiple DTOs",
+      "good_example": "Order.cs             // Contains Order class\nUserService.cs       // Contains UserService class\nOrderDto.cs          // Contains OrderDto record\nCreateOrderRequest.cs // Contains CreateOrderRequest record",
+      "rationale": "Predictable file names enable quick navigation and prevent confusion."
+    },
+    {
+      "id": "CS-FILE-007",
+      "title": "One Primary Type Per File",
+      "severity": "major",
+      "check": "Each file MUST contain one primary public type. Related nested/helper types may coexist.",
+      "bad_example": "// Models.cs\npublic class Order { }\npublic class Customer { }\npublic class Product { }",
+      "good_example": "// Order.cs\npublic class Order\n{\n    public record OrderLine(int ProductId, int Quantity); // Nested is OK\n}\n\n// Customer.cs\npublic class Customer { }\n\n// Product.cs\npublic class Product { }",
+      "rationale": "Single-type files are easier to navigate, review, and maintain."
+    },
+    {
+      "id": "CS-FILE-008",
+      "title": "Interface File Separation",
+      "severity": "major",
+      "check": "Interfaces MUST be in separate files from implementations. All interfaces in Interfaces/ folder.",
+      "bad_example": "// OrderService.cs\npublic interface IOrderService { }\npublic class OrderService : IOrderService { }",
+      "good_example": "Interfaces/\n  IOrderService.cs\n  IOrderRepository.cs\nServices/\n  OrderService.cs\nRepositories/\n  OrderRepository.cs",
+      "rationale": "Separate interface files enable dependency inversion and clean architecture."
+    },
+    {
+      "id": "CS-FILE-009",
+      "title": "Related Records in Single File",
+      "severity": "info",
+      "check": "Small related records (DTOs, requests, responses) MAY share a file if closely related.",
+      "bad_example": "// Too many unrelated types in one file\nAllOrderDtos.cs // Contains 20 different DTOs",
+      "good_example": "// OrderDtos.cs - Related DTOs together\npublic record OrderDto(string Id, decimal Total);\npublic record OrderSummaryDto(string Id, string Status);\npublic record OrderLineDto(string ProductId, int Quantity);\n\n// OrderCommands.cs - Related commands together\npublic record CreateOrderCommand(string CustomerId, List<OrderLineDto> Lines);\npublic record CancelOrderCommand(string OrderId, string Reason);",
+      "rationale": "Grouping related records reduces file count while maintaining cohesion."
+    },
+    {
+      "id": "CS-FILE-010",
+      "title": "Extension Files",
+      "severity": "info",
+      "check": "Extension methods MUST be in Extensions/ folder with {Type}Extensions.cs naming.",
+      "bad_example": "Helpers/StringHelpers.cs\nUtils/Extensions.cs",
+      "good_example": "Extensions/\n  StringExtensions.cs\n  EnumerableExtensions.cs\n  HttpClientExtensions.cs\n  ServiceCollectionExtensions.cs",
+      "rationale": "Consistent location and naming makes extensions discoverable."
+    },
+    {
+      "id": "CS-FILE-011",
+      "title": "Configuration Files",
+      "severity": "major",
+      "check": "Configuration option classes MUST be in Configuration/ or Options/ folder.",
+      "bad_example": "// Scattered configuration classes\nServices/DatabaseSettings.cs\nApi/AppConfig.cs",
+      "good_example": "Configuration/\n  DatabaseOptions.cs\n  CacheOptions.cs\n  AuthenticationOptions.cs\n  FeatureFlags.cs",
+      "rationale": "Centralized configuration is easier to review and maintain."
+    },
+    {
+      "id": "CS-FILE-012",
+      "title": "Namespace-Folder Alignment",
+      "severity": "critical",
+      "check": "Namespaces MUST match folder path. No namespace/folder mismatches.",
+      "bad_example": "// File: src/Orders/Services/OrderService.cs\nnamespace MyApp.Services; // Doesn't match path",
+      "good_example": "// File: src/Orders/Services/OrderService.cs\nnamespace MyApp.Orders.Services;",
+      "rationale": "Matching namespaces and folders prevents confusion and enables tooling."
+    },
+    {
+      "id": "CS-FILE-013",
+      "title": "Test Project Structure",
+      "severity": "major",
+      "check": "Test projects MUST mirror source project structure.",
+      "bad_example": "MyApp.Tests/\n  OrderTests.cs\n  UserTests.cs\n  AllIntegrationTests.cs",
+      "good_example": "MyApp.Core.Tests/\n  Orders/\n    OrderServiceTests.cs\n    OrderValidatorTests.cs\n  Users/\n    UserServiceTests.cs\n  Fixtures/\n    DatabaseFixture.cs\n  Helpers/\n    TestDataBuilder.cs",
+      "rationale": "Parallel structure makes finding and maintaining tests intuitive."
+    },
+    {
+      "id": "CS-FILE-014",
+      "title": "Project File Configuration",
+      "severity": "critical",
+      "check": "All .csproj files MUST be explicit with full configuration, not minimal/implicit.",
+      "bad_example": "<Project Sdk=\"Microsoft.NET.Sdk.Web\">\n  <PropertyGroup>\n    <TargetFramework>net10.0</TargetFramework>\n  </PropertyGroup>\n</Project>",
+      "good_example": "<Project Sdk=\"Microsoft.NET.Sdk.Web\">\n  <PropertyGroup>\n    <!-- Build Configuration -->\n    <TargetFramework>net10.0</TargetFramework>\n    <Nullable>enable</Nullable>\n    <ImplicitUsings>enable</ImplicitUsings>\n    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>\n    <WarningsAsErrors />\n\n    <!-- Assembly Information -->\n    <RootNamespace>MyCompany.OrderSystem.Api</RootNamespace>\n    <AssemblyName>MyCompany.OrderSystem.Api</AssemblyName>\n\n    <!-- Documentation -->\n    <GenerateDocumentationFile>true</GenerateDocumentationFile>\n    <NoWarn>$(NoWarn);1591</NoWarn>\n\n    <!-- Analyzers -->\n    <EnableNETAnalyzers>true</EnableNETAnalyzers>\n    <AnalysisLevel>latest</AnalysisLevel>\n    <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>\n\n    <!-- Package Metadata -->\n    <Authors>MyCompany</Authors>\n    <Company>MyCompany</Company>\n    <Description>Order System API</Description>\n  </PropertyGroup>\n\n  <!-- Dependencies -->\n  <ItemGroup>\n    <PackageReference Include=\"Microsoft.AspNetCore.OpenApi\" Version=\"10.0.0\" />\n  </ItemGroup>\n\n  <!-- Project References -->\n  <ItemGroup>\n    <ProjectReference Include=\"..\\MyCompany.OrderSystem.Core\\MyCompany.OrderSystem.Core.csproj\" />\n  </ItemGroup>\n</Project>",
+      "rationale": "Explicit configuration prevents surprises and documents project requirements."
+    },
+    {
+      "id": "CS-FILE-015",
+      "title": "GlobalUsings File",
+      "severity": "major",
+      "check": "Common using statements MUST be in GlobalUsings.cs at project root.",
+      "bad_example": "// Every file repeats common usings\nusing Microsoft.Extensions.Logging;\nusing System.Text.Json;\nusing MyApp.Common;",
+      "good_example": "// GlobalUsings.cs\nglobal using Microsoft.Extensions.Logging;\nglobal using System.Text.Json;\nglobal using MyApp.Common;\nglobal using MyApp.Orders.Models;",
+      "rationale": "Global usings reduce repetition and ensure consistent imports."
+    },
+    {
+      "id": "CS-FILE-FORBID-001",
+      "title": "No lowercase folder names",
+      "severity": "critical",
+      "check": "FORBIDDEN: No lowercase folder names"
+    },
+    {
+      "id": "CS-FILE-FORBID-002",
+      "title": "No `Features/` wrapper folder - use domain names directly",
+      "severity": "critical",
+      "check": "FORBIDDEN: No `Features/` wrapper folder - use domain names directly"
+    },
+    {
+      "id": "CS-FILE-FORBID-003",
+      "title": "No multiple public types in single file (except records)",
+      "severity": "critical",
+      "check": "FORBIDDEN: No multiple public types in single file (except records)"
+    },
+    {
+      "id": "CS-FILE-FORBID-004",
+      "title": "No namespace/folder mismatches",
+      "severity": "critical",
+      "check": "FORBIDDEN: No namespace/folder mismatches"
+    },
+    {
+      "id": "CS-FILE-FORBID-005",
+      "title": "No `Helpers/` or `Utils/` as catch-all folders",
+      "severity": "critical",
+      "check": "FORBIDDEN: No `Helpers/` or `Utils/` as catch-all folders"
+    },
+    {
+      "id": "CS-FILE-FORBID-006",
+      "title": "No `Misc/` or `Other/` folders",
+      "severity": "critical",
+      "check": "FORBIDDEN: No `Misc/` or `Other/` folders"
+    },
+    {
+      "id": "CS-FILE-FORBID-007",
+      "title": "No deeply nested folders (max 5 levels from project root)",
+      "severity": "critical",
+      "check": "FORBIDDEN: No deeply nested folders (max 5 levels from project root)"
+    },
+    {
+      "id": "CS-FILE-FORBID-008",
+      "title": "No minimal `.csproj` files without explicit configuration",
+      "severity": "critical",
+      "check": "FORBIDDEN: No minimal `.csproj` files without explicit configuration"
+    },
+    {
+      "id": "CS-FILE-FORBID-009",
+      "title": "No business logic in `Common/` folders",
+      "severity": "critical",
+      "check": "FORBIDDEN: No business logic in `Common/` folders"
+    },
+    {
+      "id": "CS-FILE-FORBID-010",
+      "title": "No mixed concerns in single folder",
+      "severity": "critical",
+      "check": "FORBIDDEN: No mixed concerns in single folder"
+    }
+  ]
+}

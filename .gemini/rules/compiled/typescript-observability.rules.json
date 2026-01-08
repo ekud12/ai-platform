@@ -1,0 +1,179 @@
+{
+  "id": "typescript-observability",
+  "version": "1.0.0",
+  "domain": "typescript",
+  "applies_to": [
+    "*.ts",
+    "*.tsx"
+  ],
+  "rules": [
+    {
+      "id": "TS-OBS-001",
+      "title": "No Console in Production",
+      "severity": "critical",
+      "check": "console.log, console.error, console.warn are FORBIDDEN in production code. Use structured logging.",
+      "bad_example": "function processOrder(order: Order): void {\n  console.log('Processing order:', order.id);\n  console.error('Order failed:', error.message);\n}",
+      "good_example": "import { logger } from '@/shared/logger';\n\nfunction processOrder(order: Order): void {\n  logger.info('Processing order', { orderId: order.id, customerId: order.customerId });\n  logger.error('Order processing failed', { orderId: order.id, error: error.message });\n}",
+      "rationale": "Structured logging enables filtering, aggregation, and analysis in production systems."
+    },
+    {
+      "id": "TS-OBS-002",
+      "title": "Structured Logging Format",
+      "severity": "critical",
+      "check": "All logs MUST use structured JSON format with named properties, not string concatenation.",
+      "bad_example": "logger.info(`User ${userId} created order ${orderId} for $${amount}`);\nlogger.error('Failed to process: ' + error.message);",
+      "good_example": "logger.info('Order created', {\n  userId,\n  orderId,\n  amount,\n  currency: 'USD'\n});\n\nlogger.error('Order processing failed', {\n  orderId,\n  error: error.message,\n  stack: error.stack\n});",
+      "rationale": "Structured logs are machine-parseable and enable powerful querying."
+    },
+    {
+      "id": "TS-OBS-003",
+      "title": "Correlation ID in All Logs",
+      "severity": "critical",
+      "check": "Every log entry MUST include correlation ID, request ID, or trace ID.",
+      "bad_example": "logger.info('Processing request', { path: '/orders' });\n// No correlation - can't trace across services",
+      "good_example": "import { AsyncLocalStorage } from 'node:async_hooks';\n\nconst requestContext = new AsyncLocalStorage<RequestContext>();\n\nlogger.info('Processing request', {\n  correlationId: requestContext.getStore()?.correlationId,\n  requestId: requestContext.getStore()?.requestId,\n  path: '/orders'\n});",
+      "rationale": "Correlation IDs enable distributed tracing across services and requests."
+    },
+    {
+      "id": "TS-OBS-004",
+      "title": "AsyncLocalStorage for Context",
+      "severity": "major",
+      "check": "Request context MUST use AsyncLocalStorage for automatic propagation across async boundaries.",
+      "bad_example": "// Manually passing context everywhere\nasync function processOrder(order: Order, correlationId: string): Promise<void> {\n  await validateOrder(order, correlationId);\n  await chargePayment(order, correlationId);\n  await sendNotification(order, correlationId);\n}",
+      "good_example": "import { AsyncLocalStorage } from 'node:async_hooks';\n\ntype RequestContext = {\n  correlationId: string;\n  userId?: string;\n  traceId: string;\n};\n\nexport const requestContext = new AsyncLocalStorage<RequestContext>();\n\n// Middleware sets context once\napp.use((req, res, next) => {\n  const ctx: RequestContext = {\n    correlationId: req.headers['x-correlation-id'] as string ?? crypto.randomUUID(),\n    userId: req.user?.id,\n    traceId: crypto.randomUUID()\n  };\n  requestContext.run(ctx, next);\n});\n\n// All functions automatically have access\nasync function processOrder(order: Order): Promise<void> {\n  const ctx = requestContext.getStore();\n  logger.info('Processing order', { ...ctx, orderId: order.id });\n}",
+      "rationale": "AsyncLocalStorage provides clean context propagation without parameter drilling."
+    },
+    {
+      "id": "TS-OBS-005",
+      "title": "Log at All Exit Points",
+      "severity": "major",
+      "check": "Every function MUST log at entry (debug) and exit (info for success, error for failure).",
+      "bad_example": "async function createOrder(request: CreateOrderRequest): Promise<Order> {\n  const order = await orderRepository.create(request);\n  return order; // No logging\n}",
+      "good_example": "async function createOrder(request: CreateOrderRequest): Promise<Order> {\n  logger.debug('Creating order', { customerId: request.customerId });\n\n  try {\n    const order = await orderRepository.create(request);\n    logger.info('Order created successfully', {\n      orderId: order.id,\n      customerId: request.customerId,\n      total: order.total\n    });\n    return order;\n  } catch (error) {\n    logger.error('Failed to create order', {\n      customerId: request.customerId,\n      error: error instanceof Error ? error.message : String(error)\n    });\n    throw error;\n  }\n}",
+      "rationale": "Entry/exit logging enables complete request tracing and performance analysis."
+    },
+    {
+      "id": "TS-OBS-006",
+      "title": "OpenTelemetry Integration",
+      "severity": "major",
+      "check": "Distributed systems MUST use OpenTelemetry for tracing with proper span creation.",
+      "bad_example": "// No tracing\nasync function processPayment(orderId: string): Promise<PaymentResult> {\n  return await paymentClient.charge(orderId);\n}",
+      "good_example": "import { trace, SpanStatusCode } from '@opentelemetry/api';\n\nconst tracer = trace.getTracer('order-service');\n\nasync function processPayment(orderId: string): Promise<PaymentResult> {\n  return tracer.startActiveSpan('processPayment', async (span) => {\n    try {\n      span.setAttribute('orderId', orderId);\n      const result = await paymentClient.charge(orderId);\n      span.setAttribute('paymentId', result.paymentId);\n      span.setStatus({ code: SpanStatusCode.OK });\n      return result;\n    } catch (error) {\n      span.setStatus({ code: SpanStatusCode.ERROR, message: error.message });\n      span.recordException(error);\n      throw error;\n    } finally {\n      span.end();\n    }\n  });\n}",
+      "rationale": "OpenTelemetry provides vendor-neutral distributed tracing and observability."
+    },
+    {
+      "id": "TS-OBS-007",
+      "title": "HTTP Client Tracing",
+      "severity": "major",
+      "check": "All outgoing HTTP requests MUST log duration, status, and propagate trace context.",
+      "bad_example": "const response = await fetch('https://api.payment.com/charge');\n// No logging, no tracing",
+      "good_example": "async function httpRequest(url: string, options: RequestInit): Promise<Response> {\n  const startTime = performance.now();\n  const ctx = requestContext.getStore();\n\n  const headers = new Headers(options.headers);\n  headers.set('X-Correlation-Id', ctx?.correlationId ?? '');\n  headers.set('traceparent', getTraceparent());\n\n  try {\n    const response = await fetch(url, { ...options, headers });\n    const duration = performance.now() - startTime;\n\n    logger.info('HTTP request completed', {\n      url,\n      method: options.method ?? 'GET',\n      status: response.status,\n      durationMs: Math.round(duration),\n      correlationId: ctx?.correlationId\n    });\n\n    return response;\n  } catch (error) {\n    const duration = performance.now() - startTime;\n    logger.error('HTTP request failed', {\n      url,\n      method: options.method ?? 'GET',\n      durationMs: Math.round(duration),\n      error: error.message,\n      correlationId: ctx?.correlationId\n    });\n    throw error;\n  }\n}",
+      "rationale": "HTTP logging enables latency analysis and debugging of integration issues."
+    },
+    {
+      "id": "TS-OBS-008",
+      "title": "Health Check Endpoints",
+      "severity": "critical",
+      "check": "All services MUST expose /health/live and /health/ready endpoints.",
+      "bad_example": "app.get('/health', (req, res) => {\n  res.json({ status: 'ok' }); // No dependency checks\n});",
+      "good_example": "type HealthStatus = 'healthy' | 'degraded' | 'unhealthy';\n\ninterface HealthCheck {\n  name: string;\n  status: HealthStatus;\n  duration?: number;\n  error?: string;\n}\n\napp.get('/health/live', (req, res) => {\n  res.json({ status: 'healthy', timestamp: new Date().toISOString() });\n});\n\napp.get('/health/ready', async (req, res) => {\n  const checks: HealthCheck[] = await Promise.all([\n    checkDatabase(),\n    checkRedis(),\n    checkExternalApi()\n  ]);\n\n  const overallStatus = checks.every(c => c.status === 'healthy')\n    ? 'healthy'\n    : checks.some(c => c.status === 'unhealthy')\n      ? 'unhealthy'\n      : 'degraded';\n\n  const statusCode = overallStatus === 'healthy' ? 200 : overallStatus === 'degraded' ? 200 : 503;\n\n  res.status(statusCode).json({\n    status: overallStatus,\n    timestamp: new Date().toISOString(),\n    checks\n  });\n});",
+      "rationale": "Separate liveness/readiness checks enable proper Kubernetes orchestration."
+    },
+    {
+      "id": "TS-OBS-009",
+      "title": "Error Logging with Context",
+      "severity": "critical",
+      "check": "All errors MUST be logged with full context including stack trace, cause chain, and identifiers.",
+      "bad_example": "catch (error) {\n  logger.error('Something went wrong');\n  throw error;\n}",
+      "good_example": "catch (error) {\n  logger.error('Order processing failed', {\n    orderId,\n    customerId,\n    operation: 'processOrder',\n    error: {\n      name: error instanceof Error ? error.name : 'UnknownError',\n      message: error instanceof Error ? error.message : String(error),\n      stack: error instanceof Error ? error.stack : undefined,\n      cause: error instanceof Error && error.cause\n        ? { message: (error.cause as Error).message }\n        : undefined\n    },\n    correlationId: requestContext.getStore()?.correlationId\n  });\n  throw error;\n}",
+      "rationale": "Rich error context enables effective debugging and postmortem analysis."
+    },
+    {
+      "id": "TS-OBS-010",
+      "title": "Metrics Collection",
+      "severity": "major",
+      "check": "Key operations MUST emit metrics: counters for events, histograms for durations.",
+      "bad_example": "// No metrics\nasync function processOrder(order: Order): Promise<void> {\n  await chargePayment(order);\n}",
+      "good_example": "import { Counter, Histogram, Registry } from 'prom-client';\n\nconst ordersProcessed = new Counter({\n  name: 'orders_processed_total',\n  help: 'Total orders processed',\n  labelNames: ['status']\n});\n\nconst orderProcessingDuration = new Histogram({\n  name: 'order_processing_duration_seconds',\n  help: 'Order processing duration',\n  buckets: [0.1, 0.5, 1, 2, 5, 10]\n});\n\nasync function processOrder(order: Order): Promise<void> {\n  const end = orderProcessingDuration.startTimer();\n  try {\n    await chargePayment(order);\n    ordersProcessed.inc({ status: 'success' });\n  } catch (error) {\n    ordersProcessed.inc({ status: 'failure' });\n    throw error;\n  } finally {\n    end();\n  }\n}",
+      "rationale": "Metrics enable alerting, capacity planning, and performance analysis."
+    },
+    {
+      "id": "TS-OBS-011",
+      "title": "Startup Validation Logging",
+      "severity": "major",
+      "check": "Application startup MUST log configuration validation, dependencies, and metadata.",
+      "bad_example": "app.listen(3000);\n// No startup logging",
+      "good_example": "async function bootstrap(): Promise<void> {\n  logger.info('Application starting', {\n    version: process.env.npm_package_version,\n    nodeVersion: process.version,\n    environment: process.env.NODE_ENV,\n    commitSha: process.env.COMMIT_SHA\n  });\n\n  // Validate configuration\n  const configResult = configSchema.safeParse(process.env);\n  if (!configResult.success) {\n    logger.error('Configuration validation failed', {\n      errors: configResult.error.issues\n    });\n    process.exit(1);\n  }\n  logger.info('Configuration validated successfully');\n\n  // Check dependencies\n  await checkDatabaseConnection();\n  logger.info('Database connection established');\n\n  await checkRedisConnection();\n  logger.info('Redis connection established');\n\n  app.listen(config.port, () => {\n    logger.info('Application started', {\n      port: config.port,\n      startupDurationMs: performance.now()\n    });\n  });\n}",
+      "rationale": "Startup logging enables quick diagnosis of deployment issues."
+    },
+    {
+      "id": "TS-OBS-012",
+      "title": "PII Redaction",
+      "severity": "critical",
+      "check": "Logs MUST NOT contain PII, passwords, tokens, or other sensitive data.",
+      "bad_example": "logger.info('User login', {\n  email: user.email,\n  password: request.password, // NEVER\n  authToken: token // NEVER\n});",
+      "good_example": "logger.info('User login', {\n  userId: user.id,\n  emailDomain: user.email.split('@')[1], // Only domain, not full email\n  hasAuthToken: Boolean(token)\n});\n\n// Or use redaction\nconst redactedLogger = logger.child({\n  redact: ['password', 'token', 'authorization', 'cookie', 'email']\n});",
+      "rationale": "Logging PII creates compliance and security risks."
+    },
+    {
+      "id": "TS-OBS-FORBID-001",
+      "title": "No `console.log/error/warn` in production code",
+      "severity": "critical",
+      "check": "FORBIDDEN: No `console.log/error/warn` in production code"
+    },
+    {
+      "id": "TS-OBS-FORBID-002",
+      "title": "No string concatenation in log messages",
+      "severity": "critical",
+      "check": "FORBIDDEN: No string concatenation in log messages"
+    },
+    {
+      "id": "TS-OBS-FORBID-003",
+      "title": "No logs without correlation/request ID",
+      "severity": "critical",
+      "check": "FORBIDDEN: No logs without correlation/request ID"
+    },
+    {
+      "id": "TS-OBS-FORBID-004",
+      "title": "No sensitive data (passwords, tokens, PII) in logs",
+      "severity": "critical",
+      "check": "FORBIDDEN: No sensitive data (passwords, tokens, PII) in logs"
+    },
+    {
+      "id": "TS-OBS-FORBID-005",
+      "title": "No missing error logging in catch blocks",
+      "severity": "critical",
+      "check": "FORBIDDEN: No missing error logging in catch blocks"
+    },
+    {
+      "id": "TS-OBS-FORBID-006",
+      "title": "No missing health check endpoints",
+      "severity": "critical",
+      "check": "FORBIDDEN: No missing health check endpoints"
+    },
+    {
+      "id": "TS-OBS-FORBID-007",
+      "title": "No HTTP requests without duration logging",
+      "severity": "critical",
+      "check": "FORBIDDEN: No HTTP requests without duration logging"
+    },
+    {
+      "id": "TS-OBS-FORBID-008",
+      "title": "No startup without configuration validation logging",
+      "severity": "critical",
+      "check": "FORBIDDEN: No startup without configuration validation logging"
+    },
+    {
+      "id": "TS-OBS-FORBID-009",
+      "title": "No silent error swallowing",
+      "severity": "critical",
+      "check": "FORBIDDEN: No silent error swallowing"
+    },
+    {
+      "id": "TS-OBS-FORBID-010",
+      "title": "No unstructured log formats in production",
+      "severity": "critical",
+      "check": "FORBIDDEN: No unstructured log formats in production"
+    }
+  ]
+}

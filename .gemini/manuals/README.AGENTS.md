@@ -28,4 +28,4 @@ Agents are **specialized**. They do not cross boundaries.
 ### 5. The Referee (`meta.agent.md`)
 *   **Role:** Governance & Consistency.
 *   **Output:** Strict JSON Final Approval.
-*   **Directives:** Enforce the `Constitution` and Memory Compliance (`docs/LESSONS.md`).
+*   **Directives:** Enforce the `Constitution` and Memory Compliance (`.gemmem/LESSONS.md`).

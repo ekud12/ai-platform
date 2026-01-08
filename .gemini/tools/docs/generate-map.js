@@ -3,9 +3,10 @@ const { createReadStream } = require('fs');
 const path = require('path');
 const readline = require('readline');
 
-// --- Configuration ---
-const ROOT_DIR = path.resolve(__dirname, '../../');
-const MAP_FILE = path.join(ROOT_DIR, 'docs', 'ARCHITECTURE.md');
+// --- Configuration (using smart path resolver) ---
+const paths = require('../../lib/paths');
+const ROOT_DIR = paths.workspace;
+const MAP_FILE = paths.files.architecture;
 // Regex for files/dirs to completely ignore
 const EXCLUDE_REGEX = /[\\/](bin|obj|node_modules|dist|build|coverage|\.git|\.vs|\.vscode|test-results|assets|public|wwwroot|mocks|__tests__)[\\/]/;
 

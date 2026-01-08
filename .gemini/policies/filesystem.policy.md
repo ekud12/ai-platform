@@ -25,7 +25,7 @@ All file operations by all agents.
 **Allowed**:
 - Project source directories
 - Configuration files (non-secret)
-- Documentation directories (`docs/`)
+- Documentation directories (`.gemmem/`)
 - Agent definition files
 
 **Blocked**:

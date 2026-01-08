@@ -25,6 +25,10 @@ from pathlib import Path
 from dataclasses import dataclass, asdict
 from typing import Optional
 
+# Add lib directory to path for imports
+sys.path.insert(0, str(Path(__file__).parent.parent.parent / 'lib'))
+from paths import paths
+
 
 @dataclass
 class Rule:
@@ -120,9 +124,43 @@ def parse_rule_section(section: str) -> Optional[Rule]:
     )
 
 
+def parse_forbidden_patterns(content: str) -> list[Rule]:
+    """
+    Parse forbidden patterns section from markdown.
+
+    Forbidden patterns use bullet format:
+    - XX-XXXX-FORBID-001: Description of what's forbidden
+    """
+    rules = []
+
+    # Find the Forbidden Patterns section
+    forbidden_match = re.search(r'##\s*Forbidden Patterns\s*\n(.*?)(?=^##|\Z)', content, re.MULTILINE | re.DOTALL)
+    if not forbidden_match:
+        return rules
+
+    forbidden_section = forbidden_match.group(1)
+
+    # Parse each bullet point: - XX-XXXX-FORBID-NNN: Description
+    pattern = r'^-\s+([A-Z]{2,4}-[A-Z]{2,10}-FORBID-\d{3}):\s*(.+)$'
+    for match in re.finditer(pattern, forbidden_section, re.MULTILINE):
+        rule_id = match.group(1)
+        description = match.group(2).strip()
+
+        rules.append(Rule(
+            id=rule_id,
+            title=description,
+            severity="critical",  # Forbidden patterns are always critical
+            check=f"FORBIDDEN: {description}"
+        ))
+
+    return rules
+
+
 def parse_rules_file(filepath: Path) -> list[Rule]:
     """Parse all rules from a markdown file."""
     content = filepath.read_text(encoding='utf-8')
+
+    # Parse main rules (## XX-XXX-001 — Title format)
     sections = re.split(r'(?=^## [A-Z]{2,4}-[A-Z]{2,6}-\d{3})', content, flags=re.MULTILINE)
 
     rules = []
@@ -131,6 +169,10 @@ def parse_rules_file(filepath: Path) -> list[Rule]:
             rule = parse_rule_section(section)
             if rule:
                 rules.append(rule)
+
+    # Parse forbidden patterns (bullet format)
+    forbidden_rules = parse_forbidden_patterns(content)
+    rules.extend(forbidden_rules)
 
     return rules
 
@@ -290,9 +332,9 @@ def main():
     parser.add_argument("--quiet", action="store_true", help="Suppress output")
     args = parser.parse_args()
 
-    script_dir = Path(__file__).parent
-    rules_dir = script_dir.parent / "rules"
-    compiled_dir = rules_dir / "compiled"
+    # Use smart path resolver for CI/CD and Docker compatibility
+    rules_dir = paths.files.rules
+    compiled_dir = paths.files.compiled_rules
     schema_path = rules_dir / "rule.schema.json"
 
     # Check mode: just report if stale, exit 1 if recompilation needed

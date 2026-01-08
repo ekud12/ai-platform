@@ -7,31 +7,12 @@ agents:
   coder-dotnet:
     definition: agents/roles/coder.dotnet.agent.md
     rules:
-      - rules/dotnet/async.rules.md
-      - rules/dotnet/security.rules.md
-      - rules/dotnet/performance.rules.md
-      - rules/dotnet/api.rules.md
-      - rules/dotnet/language.rules.md
-      - rules/dotnet/forbidden.rules.md
-      - rules/dotnet/memory.rules.md
-      - rules/dotnet/data.rules.md
-      - rules/dotnet/observability.rules.md
-      - rules/dotnet/docker.rules.md
-      - rules/dotnet/messaging.rules.md
-      - rules/dotnet/caching.rules.md
-      - rules/dotnet/solution.rules.md
-      - rules/dotnet/modernization.rules.md
+      - rules/dotnet/*.rules.md
 
   coder-typescript:
     definition: agents/roles/coder.typescript.agent.md
     rules:
-      - rules/typescript/types.rules.md
-      - rules/typescript/security.rules.md
-      - rules/typescript/async.rules.md
-      - rules/typescript/runtime.rules.md
-      - rules/typescript/forbidden.rules.md
-      - rules/typescript/performance.rules.md
-      - rules/typescript/monorepo.rules.md
+      - rules/typescript/*.rules.md
 
   reviewer-dotnet:
     definition: agents/roles/reviewer.dotnet.agent.md

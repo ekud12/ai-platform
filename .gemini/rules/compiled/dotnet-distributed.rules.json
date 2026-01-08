@@ -1,0 +1,179 @@
+{
+  "id": "dotnet-distributed",
+  "version": "1.0.0",
+  "domain": "dotnet",
+  "applies_to": [
+    "*.cs",
+    "*.csx"
+  ],
+  "rules": [
+    {
+      "id": "CS-DIST-001",
+      "title": "Circuit Breaker Pattern",
+      "severity": "critical",
+      "check": "All external service calls MUST use circuit breaker pattern to prevent cascade failures.",
+      "bad_example": "public async Task<Data> GetDataAsync()\n{\n    return await _httpClient.GetFromJsonAsync<Data>(\"/api/data\");\n    // No protection - failures cascade\n}",
+      "good_example": "builder.Services.AddHttpClient<IDataClient, DataClient>()\n    .AddResilienceHandler(\"data-pipeline\", builder =>\n    {\n        builder.AddCircuitBreaker(new CircuitBreakerStrategyOptions<HttpResponseMessage>\n        {\n            FailureRatio = 0.5,\n            SamplingDuration = TimeSpan.FromSeconds(30),\n            MinimumThroughput = 10,\n            BreakDuration = TimeSpan.FromSeconds(30),\n            ShouldHandle = new PredicateBuilder<HttpResponseMessage>()\n                .Handle<HttpRequestException>()\n                .HandleResult(r => r.StatusCode >= HttpStatusCode.InternalServerError)\n        });\n    });",
+      "rationale": "Circuit breakers prevent overwhelming failing services and allow recovery time."
+    },
+    {
+      "id": "CS-DIST-002",
+      "title": "Retry with Exponential Backoff",
+      "severity": "critical",
+      "check": "Transient failures MUST use retry with exponential backoff and jitter.",
+      "bad_example": "for (int i = 0; i < 3; i++)\n{\n    try { return await CallService(); }\n    catch { await Task.Delay(1000); } // Fixed delay\n}",
+      "good_example": "builder.Services.AddHttpClient<IOrderClient, OrderClient>()\n    .AddResilienceHandler(\"order-retry\", builder =>\n    {\n        builder.AddRetry(new RetryStrategyOptions<HttpResponseMessage>\n        {\n            MaxRetryAttempts = 3,\n            Delay = TimeSpan.FromMilliseconds(500),\n            BackoffType = DelayBackoffType.Exponential,\n            UseJitter = true,\n            ShouldHandle = new PredicateBuilder<HttpResponseMessage>()\n                .Handle<HttpRequestException>()\n                .Handle<TimeoutException>()\n                .HandleResult(r => r.StatusCode == HttpStatusCode.TooManyRequests)\n        });\n    });",
+      "rationale": "Exponential backoff with jitter prevents thundering herd and allows services to recover."
+    },
+    {
+      "id": "CS-DIST-003",
+      "title": "Timeout Policies",
+      "severity": "critical",
+      "check": "All external calls MUST have explicit timeouts. Never wait indefinitely.",
+      "bad_example": "var response = await _httpClient.GetAsync(\"/api/data\");\n// No timeout - can hang forever",
+      "good_example": "builder.Services.AddHttpClient<IDataClient, DataClient>()\n    .AddResilienceHandler(\"data-timeout\", builder =>\n    {\n        builder.AddTimeout(new TimeoutStrategyOptions\n        {\n            Timeout = TimeSpan.FromSeconds(10),\n            OnTimeout = args =>\n            {\n                _logger.LogWarning(\"Request timed out after {Timeout}s\",\n                    args.Timeout.TotalSeconds);\n                return default;\n            }\n        });\n    });\n\n// Or per-request with CancellationToken\nusing var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));\nvar response = await _httpClient.GetAsync(\"/api/data\", cts.Token);",
+      "rationale": "Timeouts prevent resource exhaustion and provide predictable failure modes."
+    },
+    {
+      "id": "CS-DIST-004",
+      "title": "Bulkhead Isolation",
+      "severity": "major",
+      "check": "Critical paths SHOULD use bulkhead isolation to prevent resource starvation.",
+      "bad_example": "// All requests share same resources - one slow service affects all\npublic async Task<IEnumerable<Order>> GetOrdersAsync() => await _orderClient.GetAsync();\npublic async Task<IEnumerable<Product>> GetProductsAsync() => await _productClient.GetAsync();",
+      "good_example": "builder.Services.AddHttpClient<IOrderClient, OrderClient>()\n    .AddResilienceHandler(\"order-bulkhead\", builder =>\n    {\n        builder.AddConcurrencyLimiter(new ConcurrencyLimiterOptions\n        {\n            PermitLimit = 10,\n            QueueLimit = 20\n        });\n    });\n\nbuilder.Services.AddHttpClient<IProductClient, ProductClient>()\n    .AddResilienceHandler(\"product-bulkhead\", builder =>\n    {\n        builder.AddConcurrencyLimiter(new ConcurrencyLimiterOptions\n        {\n            PermitLimit = 25,\n            QueueLimit = 50\n        });\n    });",
+      "rationale": "Bulkheads isolate resources so failures in one component don't exhaust shared resources."
+    },
+    {
+      "id": "CS-DIST-005",
+      "title": "Idempotency Keys",
+      "severity": "critical",
+      "check": "All mutating operations MUST support idempotency keys for safe retries.",
+      "bad_example": "[HttpPost(\"orders\")]\npublic async Task<IActionResult> CreateOrder([FromBody] CreateOrderRequest request)\n{\n    var order = await _orderService.CreateAsync(request);\n    return Created($\"/orders/{order.Id}\", order);\n    // Retry creates duplicate orders\n}",
+      "good_example": "[HttpPost(\"orders\")]\npublic async Task<IActionResult> CreateOrder(\n    [FromHeader(Name = \"Idempotency-Key\")] string idempotencyKey,\n    [FromBody] CreateOrderRequest request)\n{\n    // Check for existing operation with this key\n    var existing = await _idempotencyStore.GetAsync(idempotencyKey);\n    if (existing is not null)\n        return existing.ToActionResult();\n\n    var order = await _orderService.CreateAsync(request);\n    var result = Created($\"/orders/{order.Id}\", order);\n\n    // Store result for future requests with same key\n    await _idempotencyStore.SetAsync(idempotencyKey, result, TimeSpan.FromHours(24));\n\n    return result;\n}",
+      "rationale": "Idempotency keys enable safe retries without duplicate side effects."
+    },
+    {
+      "id": "CS-DIST-006",
+      "title": "Correlation ID Propagation",
+      "severity": "critical",
+      "check": "All requests MUST propagate correlation IDs across service boundaries.",
+      "bad_example": "public async Task<Order> ProcessOrderAsync(OrderRequest request)\n{\n    await _inventoryClient.ReserveAsync(request.Items);\n    await _paymentClient.ChargeAsync(request.Amount);\n    // No correlation - can't trace across services\n}",
+      "good_example": "public class CorrelationHandler : DelegatingHandler\n{\n    protected override async Task<HttpResponseMessage> SendAsync(\n        HttpRequestMessage request,\n        CancellationToken ct)\n    {\n        var activity = Activity.Current;\n        if (activity is not null)\n        {\n            request.Headers.TryAddWithoutValidation(\n                \"X-Correlation-Id\", activity.TraceId.ToString());\n            request.Headers.TryAddWithoutValidation(\n                \"X-Request-Id\", activity.SpanId.ToString());\n        }\n        return await base.SendAsync(request, ct);\n    }\n}\n\n// Middleware to extract/create correlation ID\napp.Use(async (context, next) =>\n{\n    var correlationId = context.Request.Headers[\"X-Correlation-Id\"].FirstOrDefault()\n        ?? Activity.Current?.TraceId.ToString()\n        ?? Guid.NewGuid().ToString();\n\n    using (logger.BeginScope(new Dictionary<string, object>\n    {\n        [\"CorrelationId\"] = correlationId\n    }))\n    {\n        context.Response.Headers[\"X-Correlation-Id\"] = correlationId;\n        await next();\n    }\n});",
+      "rationale": "Correlation IDs enable distributed tracing and debugging across service boundaries."
+    },
+    {
+      "id": "CS-DIST-007",
+      "title": "Outbox Pattern",
+      "severity": "major",
+      "check": "Event publishing with database updates MUST use the outbox pattern for reliability.",
+      "bad_example": "public async Task CreateOrderAsync(Order order)\n{\n    await _dbContext.Orders.AddAsync(order);\n    await _dbContext.SaveChangesAsync();\n    await _eventBus.PublishAsync(new OrderCreatedEvent(order.Id));\n    // If publish fails, database has order but event is lost\n}",
+      "good_example": "public async Task CreateOrderAsync(Order order)\n{\n    await using var transaction = await _dbContext.Database.BeginTransactionAsync();\n\n    await _dbContext.Orders.AddAsync(order);\n\n    // Store event in outbox table (same transaction)\n    await _dbContext.OutboxMessages.AddAsync(new OutboxMessage\n    {\n        Id = Guid.NewGuid(),\n        Type = nameof(OrderCreatedEvent),\n        Payload = JsonSerializer.Serialize(new OrderCreatedEvent(order.Id)),\n        CreatedAt = _timeProvider.GetUtcNow()\n    });\n\n    await _dbContext.SaveChangesAsync();\n    await transaction.CommitAsync();\n}\n\n// Background service processes outbox\npublic class OutboxProcessor(IDbContext db, IEventBus bus) : BackgroundService\n{\n    protected override async Task ExecuteAsync(CancellationToken ct)\n    {\n        while (!ct.IsCancellationRequested)\n        {\n            var messages = await db.OutboxMessages\n                .Where(m => m.ProcessedAt == null)\n                .OrderBy(m => m.CreatedAt)\n                .Take(100)\n                .ToListAsync(ct);\n\n            foreach (var message in messages)\n            {\n                await bus.PublishAsync(message.Type, message.Payload, ct);\n                message.ProcessedAt = _timeProvider.GetUtcNow();\n            }\n\n            await db.SaveChangesAsync(ct);\n            await Task.Delay(TimeSpan.FromSeconds(1), ct);\n        }\n    }\n}",
+      "rationale": "Outbox pattern ensures atomic database + event publishing with guaranteed delivery."
+    },
+    {
+      "id": "CS-DIST-008",
+      "title": "Distributed Locks",
+      "severity": "major",
+      "check": "Distributed operations requiring coordination MUST use distributed locks with TTL.",
+      "bad_example": "// In-memory lock doesn't work across instances\nprivate static readonly SemaphoreSlim _lock = new(1, 1);\n\npublic async Task ProcessAsync()\n{\n    await _lock.WaitAsync();\n    try { /* process */ }\n    finally { _lock.Release(); }\n}",
+      "good_example": "public interface IDistributedLock\n{\n    Task<IAsyncDisposable?> TryAcquireAsync(\n        string resource,\n        TimeSpan expiry,\n        CancellationToken ct = default);\n}\n\npublic class RedisDistributedLock(IDatabase redis) : IDistributedLock\n{\n    public async Task<IAsyncDisposable?> TryAcquireAsync(\n        string resource,\n        TimeSpan expiry,\n        CancellationToken ct)\n    {\n        var lockId = Guid.NewGuid().ToString();\n        var acquired = await redis.StringSetAsync(\n            $\"lock:{resource}\",\n            lockId,\n            expiry,\n            When.NotExists);\n\n        return acquired\n            ? new LockHandle(redis, resource, lockId)\n            : null;\n    }\n}\n\n// Usage\nawait using var lockHandle = await _lock.TryAcquireAsync(\n    $\"order:{orderId}\",\n    TimeSpan.FromSeconds(30),\n    ct);\n\nif (lockHandle is null)\n    return Results.Conflict(\"Order is being processed\");\n\nawait ProcessOrderAsync(orderId);",
+      "rationale": "Distributed locks prevent concurrent modifications across multiple service instances."
+    },
+    {
+      "id": "CS-DIST-009",
+      "title": "Event-Driven Architecture",
+      "severity": "major",
+      "check": "Cross-service communication SHOULD prefer events over synchronous calls.",
+      "bad_example": "// Synchronous chain - tight coupling, cascade failures\npublic async Task CreateOrderAsync(Order order)\n{\n    await _inventoryService.ReserveAsync(order.Items);\n    await _paymentService.ChargeAsync(order.Amount);\n    await _shippingService.ScheduleAsync(order.Address);\n    await _notificationService.SendAsync(order.Customer);\n}",
+      "good_example": "public async Task CreateOrderAsync(Order order)\n{\n    order.Status = OrderStatus.Created;\n    await _dbContext.SaveChangesAsync();\n\n    // Publish event - other services react asynchronously\n    await _eventBus.PublishAsync(new OrderCreatedEvent\n    {\n        OrderId = order.Id,\n        Items = order.Items,\n        CustomerId = order.CustomerId,\n        Amount = order.Amount\n    });\n}\n\n// Inventory service handles event\npublic class InventoryEventHandler : IEventHandler<OrderCreatedEvent>\n{\n    public async Task HandleAsync(OrderCreatedEvent @event)\n    {\n        await _inventoryService.ReserveAsync(@event.Items);\n        await _eventBus.PublishAsync(new InventoryReservedEvent(@event.OrderId));\n    }\n}",
+      "rationale": "Event-driven architecture provides loose coupling, better resilience, and scalability."
+    },
+    {
+      "id": "CS-DIST-010",
+      "title": "Saga Pattern",
+      "severity": "major",
+      "check": "Multi-step distributed transactions SHOULD use saga pattern with compensation.",
+      "bad_example": "// No compensation - partial failures leave inconsistent state\npublic async Task ProcessOrderAsync(Order order)\n{\n    await _inventoryService.ReserveAsync(order.Items);\n    await _paymentService.ChargeAsync(order.Amount); // If this fails...\n    await _shippingService.ScheduleAsync(order.Address);\n    // Inventory is reserved but payment failed\n}",
+      "good_example": "public class OrderSaga : ISaga<OrderSagaData>\n{\n    public void ConfigureSteps(ISagaBuilder<OrderSagaData> builder)\n    {\n        builder\n            .Step(\"Reserve Inventory\")\n            .Execute(async (data, ctx) =>\n            {\n                data.ReservationId = await _inventory.ReserveAsync(data.Items, ctx.Token);\n            })\n            .Compensate(async (data, ctx) =>\n            {\n                await _inventory.ReleaseAsync(data.ReservationId, ctx.Token);\n            });\n\n        builder\n            .Step(\"Charge Payment\")\n            .Execute(async (data, ctx) =>\n            {\n                data.PaymentId = await _payment.ChargeAsync(data.Amount, ctx.Token);\n            })\n            .Compensate(async (data, ctx) =>\n            {\n                await _payment.RefundAsync(data.PaymentId, ctx.Token);\n            });\n\n        builder\n            .Step(\"Schedule Shipping\")\n            .Execute(async (data, ctx) =>\n            {\n                data.ShipmentId = await _shipping.ScheduleAsync(data.Address, ctx.Token);\n            })\n            .Compensate(async (data, ctx) =>\n            {\n                await _shipping.CancelAsync(data.ShipmentId, ctx.Token);\n            });\n    }\n}",
+      "rationale": "Saga pattern maintains consistency across distributed transactions with automatic rollback."
+    },
+    {
+      "id": "CS-DIST-011",
+      "title": "Health Checks for Dependencies",
+      "severity": "critical",
+      "check": "All external dependencies MUST have health checks exposed via /health endpoints.",
+      "bad_example": "app.MapHealthChecks(\"/health\");\n// Only checks if app is running, not dependencies",
+      "good_example": "builder.Services.AddHealthChecks()\n    .AddCheck(\"self\", () => HealthCheckResult.Healthy(), tags: [\"live\"])\n    .AddSqlServer(connectionString, name: \"database\", tags: [\"ready\"])\n    .AddRedis(redisConnection, name: \"cache\", tags: [\"ready\"])\n    .AddRabbitMQ(rabbitConnection, name: \"messaging\", tags: [\"ready\"])\n    .AddUrlGroup(new Uri(\"https://api.payment.com/health\"),\n        name: \"payment-api\", tags: [\"ready\"]);\n\napp.MapHealthChecks(\"/health/live\", new HealthCheckOptions\n{\n    Predicate = check => check.Tags.Contains(\"live\")\n});\n\napp.MapHealthChecks(\"/health/ready\", new HealthCheckOptions\n{\n    Predicate = check => check.Tags.Contains(\"ready\"),\n    ResponseWriter = UIResponseWriter.WriteHealthCheckUIResponse\n});",
+      "rationale": "Dependency health checks enable proper orchestration and traffic management."
+    },
+    {
+      "id": "CS-DIST-012",
+      "title": "Service Discovery",
+      "severity": "info",
+      "check": "Microservices SHOULD use service discovery instead of hardcoded URLs.",
+      "bad_example": "builder.Services.AddHttpClient<IOrderClient>(client =>\n{\n    client.BaseAddress = new Uri(\"http://order-service:8080\");\n    // Hardcoded - doesn't adapt to scaling/deployment changes\n});",
+      "good_example": "// Using service discovery (e.g., Consul, Kubernetes DNS)\nbuilder.Services.AddServiceDiscovery();\n\nbuilder.Services.AddHttpClient<IOrderClient>()\n    .AddServiceDiscovery();\n\n// Configuration\n{\n    \"Services\": {\n        \"order-service\": {\n            \"http\": [\"order-service.default.svc.cluster.local\"]\n        }\n    }\n}",
+      "rationale": "Service discovery enables dynamic scaling and failover without configuration changes."
+    },
+    {
+      "id": "CS-DIST-FORBID-001",
+      "title": "No external calls without timeout",
+      "severity": "critical",
+      "check": "FORBIDDEN: No external calls without timeout"
+    },
+    {
+      "id": "CS-DIST-FORBID-002",
+      "title": "No retry without backoff",
+      "severity": "critical",
+      "check": "FORBIDDEN: No retry without backoff"
+    },
+    {
+      "id": "CS-DIST-FORBID-003",
+      "title": "No mutating operations without idempotency support",
+      "severity": "critical",
+      "check": "FORBIDDEN: No mutating operations without idempotency support"
+    },
+    {
+      "id": "CS-DIST-FORBID-004",
+      "title": "No cross-service calls without correlation ID",
+      "severity": "critical",
+      "check": "FORBIDDEN: No cross-service calls without correlation ID"
+    },
+    {
+      "id": "CS-DIST-FORBID-005",
+      "title": "No database + event publish without outbox/transactional outbox",
+      "severity": "critical",
+      "check": "FORBIDDEN: No database + event publish without outbox/transactional outbox"
+    },
+    {
+      "id": "CS-DIST-FORBID-006",
+      "title": "No in-memory locks in distributed systems",
+      "severity": "critical",
+      "check": "FORBIDDEN: No in-memory locks in distributed systems"
+    },
+    {
+      "id": "CS-DIST-FORBID-007",
+      "title": "No synchronous chains across more than 2 services",
+      "severity": "critical",
+      "check": "FORBIDDEN: No synchronous chains across more than 2 services"
+    },
+    {
+      "id": "CS-DIST-FORBID-008",
+      "title": "No hardcoded service URLs in production",
+      "severity": "critical",
+      "check": "FORBIDDEN: No hardcoded service URLs in production"
+    },
+    {
+      "id": "CS-DIST-FORBID-009",
+      "title": "No missing health checks for external dependencies",
+      "severity": "critical",
+      "check": "FORBIDDEN: No missing health checks for external dependencies"
+    },
+    {
+      "id": "CS-DIST-FORBID-010",
+      "title": "No distributed transactions without compensation logic",
+      "severity": "critical",
+      "check": "FORBIDDEN: No distributed transactions without compensation logic"
+    }
+  ]
+}

@@ -13,11 +13,12 @@ const fs = require('fs');
 const path = require('path');
 const { execSync, spawn } = require('child_process');
 
-// Configuration
-const WORKSPACE = process.env.GEMINI_PROJECT_DIR || process.cwd();
-const GEMINI_DIR = path.join(WORKSPACE, '.gemini');
-const RULES_DIR = path.join(GEMINI_DIR, 'rules');
-const COMPILED_DIR = path.join(RULES_DIR, 'compiled');
+// Configuration (using smart path resolver)
+const paths = require('../lib/paths');
+const WORKSPACE = paths.workspace;
+const GEMINI_DIR = paths.gemini;
+const RULES_DIR = paths.files.rules;
+const COMPILED_DIR = paths.files.compiledRules;
 
 // Result helper
 function output(decision, reason, additionalContext = null) {
@@ -95,7 +96,7 @@ function compileRulesIfNeeded() {
 
     console.error(`[compile-rules] ${count} stale rule(s) detected, compiling...`);
 
-    const compileScript = path.join(GEMINI_DIR, 'tools', 'compile-rules.py');
+    const compileScript = paths.resolveGemini('tools/rules/compile-rules.py');
     if (!fs.existsSync(compileScript)) {
         console.error('[compile-rules] compile-rules.py not found');
         return true; // Don't block

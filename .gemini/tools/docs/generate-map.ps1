@@ -1,6 +1,10 @@
 $ErrorActionPreference = "Stop"
-$RootPath = Resolve-Path (Join-Path $PSScriptRoot "../../")
-$MapFile = Join-Path $RootPath "docs/ARCHITECTURE.md"
+
+# Load smart path resolver
+. "$PSScriptRoot/../../lib/paths.ps1"
+
+$RootPath = $Paths.Workspace
+$MapFile = $Paths.Files.Architecture
 
 # --- Performance & Exclusions ---
 # Smart Exclude: Skip heavy/irrelevant folders to reduce IO and Token noise

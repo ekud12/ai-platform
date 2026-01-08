@@ -1,0 +1,215 @@
+{
+  "id": "dotnet-platform",
+  "version": "1.0.0",
+  "domain": "dotnet",
+  "applies_to": [
+    "*.cs",
+    "*.csx"
+  ],
+  "rules": [
+    {
+      "id": "CS-PLAT-001",
+      "title": "TimeProvider for Time Operations",
+      "severity": "critical",
+      "check": "All time operations MUST use injected TimeProvider instead of DateTime.UtcNow or DateTime.Now.",
+      "bad_example": "public class TokenService\n{\n    public bool IsExpired(Token token)\n    {\n        return token.ExpiresAt < DateTime.UtcNow; // Untestable\n    }\n}",
+      "good_example": "public class TokenService(TimeProvider timeProvider)\n{\n    public bool IsExpired(Token token)\n    {\n        return token.ExpiresAt < timeProvider.GetUtcNow();\n    }\n}",
+      "rationale": "TimeProvider enables deterministic testing of time-dependent logic without mocking static methods."
+    },
+    {
+      "id": "CS-PLAT-002",
+      "title": "Source-Generated JSON Serialization",
+      "severity": "major",
+      "check": "All JSON serialization MUST use source-generated JsonSerializerContext for AOT compatibility and performance.",
+      "bad_example": "var json = JsonSerializer.Serialize(user); // Reflection-based\nvar user = JsonSerializer.Deserialize<User>(json);",
+      "good_example": "[JsonSerializable(typeof(User))]\n[JsonSerializable(typeof(List<User>))]\npublic partial class AppJsonContext : JsonSerializerContext { }\n\nvar json = JsonSerializer.Serialize(user, AppJsonContext.Default.User);\nvar user = JsonSerializer.Deserialize(json, AppJsonContext.Default.User);",
+      "rationale": "Source generation eliminates reflection, enabling NativeAOT and improving startup/throughput."
+    },
+    {
+      "id": "CS-PLAT-003",
+      "title": "IExceptionHandler for Global Errors",
+      "severity": "major",
+      "check": "All ASP.NET Core applications MUST implement IExceptionHandler for centralized exception handling.",
+      "bad_example": "app.UseExceptionHandler(app => app.Run(async context =>\n{\n    context.Response.StatusCode = 500;\n    await context.Response.WriteAsync(\"Error\");\n}));",
+      "good_example": "public class GlobalExceptionHandler(ILogger<GlobalExceptionHandler> logger) : IExceptionHandler\n{\n    public async ValueTask<bool> TryHandleAsync(\n        HttpContext context,\n        Exception exception,\n        CancellationToken ct)\n    {\n        logger.LogError(exception, \"Unhandled exception\");\n\n        await Results.Problem(\n            statusCode: 500,\n            title: \"Internal Server Error\",\n            extensions: new Dictionary<string, object?>\n            {\n                [\"traceId\"] = Activity.Current?.Id ?? context.TraceIdentifier\n            }\n        ).ExecuteAsync(context);\n\n        return true;\n    }\n}\n\n// Registration\nbuilder.Services.AddExceptionHandler<GlobalExceptionHandler>();",
+      "rationale": "IExceptionHandler provides type-safe, testable exception handling with proper DI support."
+    },
+    {
+      "id": "CS-PLAT-004",
+      "title": "Built-in Rate Limiting",
+      "severity": "major",
+      "check": "All public APIs MUST use built-in RateLimiter middleware with named policies.",
+      "bad_example": "// No rate limiting or custom implementation\napp.MapGet(\"/api/data\", () => GetData());",
+      "good_example": "builder.Services.AddRateLimiter(options =>\n{\n    options.AddTokenBucketLimiter(\"api\", config =>\n    {\n        config.TokenLimit = 100;\n        config.ReplenishmentPeriod = TimeSpan.FromMinutes(1);\n        config.TokensPerPeriod = 100;\n        config.QueueLimit = 10;\n    });\n\n    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;\n});\n\napp.UseRateLimiter();\n\napp.MapGet(\"/api/data\", () => GetData())\n   .RequireRateLimiting(\"api\");",
+      "rationale": "Built-in rate limiting provides consistent, configurable protection without third-party dependencies."
+    },
+    {
+      "id": "CS-PLAT-005",
+      "title": "Frozen Collections for Lookups",
+      "severity": "major",
+      "check": "Read-only lookup collections MUST use FrozenDictionary or FrozenSet for optimal performance.",
+      "bad_example": "private static readonly Dictionary<string, Handler> Handlers = new()\n{\n    [\"create\"] = new CreateHandler(),\n    [\"update\"] = new UpdateHandler()\n};",
+      "good_example": "private static readonly FrozenDictionary<string, Handler> Handlers =\n    new Dictionary<string, Handler>\n    {\n        [\"create\"] = new CreateHandler(),\n        [\"update\"] = new UpdateHandler()\n    }.ToFrozenDictionary();",
+      "rationale": "Frozen collections optimize for read performance with immutable, cache-friendly data structures."
+    },
+    {
+      "id": "CS-PLAT-006",
+      "title": "SearchValues for Multi-Value Search",
+      "severity": "info",
+      "check": "Multi-character/value searches SHOULD use SearchValues<T> for vectorized performance.",
+      "bad_example": "var index = text.IndexOfAny(new[] { '<', '>', '&', '\"' });",
+      "good_example": "private static readonly SearchValues<char> HtmlChars =\n    SearchValues.Create(\"<>&\\\"\");\n\nvar index = text.AsSpan().IndexOfAny(HtmlChars);",
+      "rationale": "SearchValues uses SIMD vectorization for significantly faster multi-value searches."
+    },
+    {
+      "id": "CS-PLAT-007",
+      "title": "Channels for Producer-Consumer",
+      "severity": "major",
+      "check": "Producer-consumer patterns MUST use System.Threading.Channels with bounded capacity.",
+      "bad_example": "private readonly Queue<WorkItem> _queue = new();\nprivate readonly object _lock = new();\n\npublic void Enqueue(WorkItem item)\n{\n    lock (_lock) { _queue.Enqueue(item); }\n}",
+      "good_example": "private readonly Channel<WorkItem> _channel =\n    Channel.CreateBounded<WorkItem>(new BoundedChannelOptions(1000)\n    {\n        FullMode = BoundedChannelFullMode.Wait,\n        SingleReader = true,\n        SingleWriter = false\n    });\n\npublic async ValueTask EnqueueAsync(WorkItem item, CancellationToken ct)\n{\n    await _channel.Writer.WriteAsync(item, ct);\n}\n\npublic IAsyncEnumerable<WorkItem> ReadAllAsync(CancellationToken ct)\n{\n    return _channel.Reader.ReadAllAsync(ct);\n}",
+      "rationale": "Channels provide thread-safe, high-performance async producer-consumer with backpressure."
+    },
+    {
+      "id": "CS-PLAT-008",
+      "title": "System.Diagnostics.Metrics",
+      "severity": "major",
+      "check": "Application metrics MUST use System.Diagnostics.Metrics with OpenTelemetry export.",
+      "bad_example": "private static int _requestCount;\nInterlocked.Increment(ref _requestCount);",
+      "good_example": "public class OrderMetrics\n{\n    private readonly Counter<long> _ordersCreated;\n    private readonly Histogram<double> _orderProcessingTime;\n\n    public OrderMetrics(IMeterFactory meterFactory)\n    {\n        var meter = meterFactory.Create(\"MyApp.Orders\");\n        _ordersCreated = meter.CreateCounter<long>(\n            \"orders.created\",\n            unit: \"{order}\",\n            description: \"Number of orders created\");\n        _orderProcessingTime = meter.CreateHistogram<double>(\n            \"orders.processing_time\",\n            unit: \"ms\",\n            description: \"Order processing duration\");\n    }\n\n    public void RecordOrderCreated() => _ordersCreated.Add(1);\n    public void RecordProcessingTime(double ms) => _orderProcessingTime.Record(ms);\n}",
+      "rationale": "System.Diagnostics.Metrics is the standard .NET metrics API with native OpenTelemetry integration."
+    },
+    {
+      "id": "CS-PLAT-009",
+      "title": "NativeAOT Compatibility",
+      "severity": "major",
+      "check": "Libraries MUST be designed for NativeAOT compatibility - avoid reflection, use source generators.",
+      "bad_example": "// Uses reflection - breaks NativeAOT\nvar props = typeof(User).GetProperties();\nvar value = Activator.CreateInstance(type);",
+      "good_example": "// Use source generators\n[JsonSerializable(typeof(User))]\npublic partial class UserJsonContext : JsonSerializerContext { }\n\n// Use generic constraints instead of reflection\npublic T Create<T>() where T : new() => new T();\n\n// Use compile-time types\npublic static User CreateUser() => new User();",
+      "rationale": "NativeAOT requires compile-time type information. Reflection is unavailable or limited."
+    },
+    {
+      "id": "CS-PLAT-010",
+      "title": "Post-Quantum Cryptography",
+      "severity": "info",
+      "check": "Long-term data protection SHOULD use post-quantum algorithms (ML-DSA) on Windows with CNG.",
+      "bad_example": "// Classical cryptography only\nusing var rsa = RSA.Create();\nvar signature = rsa.SignData(data, HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1);",
+      "good_example": "// Post-quantum digital signatures (Windows CNG)\nusing var mlDsa = MLDsa.Create(MLDsaParameterSet.ML_DSA_65);\nvar signature = mlDsa.SignData(data);\nvar isValid = mlDsa.VerifyData(data, signature);",
+      "rationale": "Post-quantum algorithms protect against future quantum computer attacks on current encrypted data."
+    },
+    {
+      "id": "CS-PLAT-011",
+      "title": "WebAuthN and Passkeys",
+      "severity": "major",
+      "check": "New authentication systems SHOULD implement WebAuthN/passkey support for passwordless auth.",
+      "bad_example": "// Password-only authentication\npublic async Task<bool> ValidateAsync(string username, string password)\n{\n    var user = await _users.FindAsync(username);\n    return _hasher.Verify(password, user.PasswordHash);\n}",
+      "good_example": "// WebAuthN passkey authentication\nbuilder.Services.AddAuthentication()\n    .AddWebAuthn(options =>\n    {\n        options.RelyingPartyId = \"example.com\";\n        options.RelyingPartyName = \"Example App\";\n        options.AllowedCredentialTypes = new[] { PublicKeyCredentialType.PublicKey };\n    });\n\n// Registration endpoint\napp.MapPost(\"/auth/register/begin\", async (WebAuthnService webAuthn, User user) =>\n{\n    var options = await webAuthn.BeginRegistrationAsync(user);\n    return Results.Ok(options);\n});",
+      "rationale": "WebAuthN provides phishing-resistant, passwordless authentication using hardware keys or biometrics."
+    },
+    {
+      "id": "CS-PLAT-012",
+      "title": "TLS 1.3 Enforcement",
+      "severity": "major",
+      "check": "All network connections MUST prefer TLS 1.3 and disable older versions where possible.",
+      "bad_example": "// Allows insecure protocols\nServicePointManager.SecurityProtocol = SecurityProtocolType.Tls | SecurityProtocolType.Tls11;",
+      "good_example": "// TLS 1.3 preferred, 1.2 minimum\nbuilder.WebHost.ConfigureKestrel(options =>\n{\n    options.ConfigureHttpsDefaults(https =>\n    {\n        https.SslProtocols = SslProtocols.Tls13 | SslProtocols.Tls12;\n    });\n});\n\n// For HttpClient\nvar handler = new SocketsHttpHandler\n{\n    SslOptions = new SslClientAuthenticationOptions\n    {\n        EnabledSslProtocols = SslProtocols.Tls13 | SslProtocols.Tls12\n    }\n};",
+      "rationale": "TLS 1.3 provides improved security and performance. Older versions have known vulnerabilities."
+    },
+    {
+      "id": "CS-PLAT-013",
+      "title": "OpenAPI 3.1 Documentation",
+      "severity": "info",
+      "check": "APIs SHOULD generate OpenAPI 3.1 documentation with comprehensive metadata.",
+      "bad_example": "app.MapGet(\"/users/{id}\", (int id) => GetUser(id));\n// No documentation",
+      "good_example": "app.MapGet(\"/users/{id}\", [EndpointSummary(\"Get user by ID\")]\n    [EndpointDescription(\"Retrieves a single user by their unique identifier\")]\n    [ProducesResponseType<User>(200)]\n    [ProducesResponseType<ProblemDetails>(404)]\n    (int id) => GetUser(id))\n    .WithName(\"GetUser\")\n    .WithTags(\"Users\")\n    .WithOpenApi();\n\n// Enable OpenAPI 3.1\nbuilder.Services.AddOpenApi(options =>\n{\n    options.OpenApiVersion = OpenApiSpecVersion.OpenApi3_1;\n});",
+      "rationale": "OpenAPI 3.1 enables better tooling, client generation, and API documentation."
+    },
+    {
+      "id": "CS-PLAT-014",
+      "title": "IOptions Validation",
+      "severity": "major",
+      "check": "All configuration options MUST use ValidateOnStart() with data annotations or custom validation.",
+      "bad_example": "builder.Services.Configure<DatabaseOptions>(config.GetSection(\"Database\"));\n// No validation - bad config discovered at runtime",
+      "good_example": "public class DatabaseOptions\n{\n    [Required]\n    public required string ConnectionString { get; init; }\n\n    [Range(1, 100)]\n    public int MaxPoolSize { get; init; } = 10;\n}\n\nbuilder.Services.AddOptions<DatabaseOptions>()\n    .Bind(config.GetSection(\"Database\"))\n    .ValidateDataAnnotations()\n    .ValidateOnStart();",
+      "rationale": "Startup validation fails fast on misconfiguration instead of runtime failures."
+    },
+    {
+      "id": "CS-PLAT-015",
+      "title": "Keyed Services",
+      "severity": "info",
+      "check": "Multiple implementations of the same interface SHOULD use keyed DI services.",
+      "bad_example": "// Awkward factory pattern\npublic interface IStorageFactory\n{\n    IStorage Create(string type);\n}",
+      "good_example": "builder.Services.AddKeyedSingleton<IStorage, LocalStorage>(\"local\");\nbuilder.Services.AddKeyedSingleton<IStorage, S3Storage>(\"s3\");\nbuilder.Services.AddKeyedSingleton<IStorage, AzureStorage>(\"azure\");\n\npublic class FileService([FromKeyedServices(\"s3\")] IStorage storage)\n{\n    // Uses S3 storage specifically\n}",
+      "rationale": "Keyed services provide clean, type-safe resolution of multiple implementations."
+    },
+    {
+      "id": "CS-PLAT-016",
+      "title": "Minimal API Validation",
+      "severity": "major",
+      "check": "Minimal API endpoints MUST use endpoint filters for input validation.",
+      "bad_example": "app.MapPost(\"/orders\", (CreateOrderRequest request) =>\n{\n    if (string.IsNullOrEmpty(request.CustomerId))\n        return Results.BadRequest(\"CustomerId required\");\n    // More manual validation...\n});",
+      "good_example": "public class ValidationFilter<T> : IEndpointFilter where T : class\n{\n    public async ValueTask<object?> InvokeAsync(\n        EndpointFilterInvocationContext context,\n        EndpointFilterDelegate next)\n    {\n        var validator = context.HttpContext.RequestServices\n            .GetService<IValidator<T>>();\n\n        var arg = context.Arguments.OfType<T>().FirstOrDefault();\n        if (arg is not null && validator is not null)\n        {\n            var result = await validator.ValidateAsync(arg);\n            if (!result.IsValid)\n                return Results.ValidationProblem(result.ToDictionary());\n        }\n\n        return await next(context);\n    }\n}\n\napp.MapPost(\"/orders\", (CreateOrderRequest request) => CreateOrder(request))\n   .AddEndpointFilter<ValidationFilter<CreateOrderRequest>>();",
+      "rationale": "Endpoint filters provide consistent, reusable validation across all endpoints."
+    },
+    {
+      "id": "CS-PLAT-FORBID-001",
+      "title": "No `DateTime.Now` or `DateTime.UtcNow` (use TimeProvider)",
+      "severity": "critical",
+      "check": "FORBIDDEN: No `DateTime.Now` or `DateTime.UtcNow` (use TimeProvider)"
+    },
+    {
+      "id": "CS-PLAT-FORBID-002",
+      "title": "No reflection-based JSON serialization (use source generators)",
+      "severity": "critical",
+      "check": "FORBIDDEN: No reflection-based JSON serialization (use source generators)"
+    },
+    {
+      "id": "CS-PLAT-FORBID-003",
+      "title": "No `Task.Run()` in libraries (push threading decisions to caller)",
+      "severity": "critical",
+      "check": "FORBIDDEN: No `Task.Run()` in libraries (push threading decisions to caller)"
+    },
+    {
+      "id": "CS-PLAT-FORBID-004",
+      "title": "No `.Result` or `.Wait()` on tasks (use await)",
+      "severity": "critical",
+      "check": "FORBIDDEN: No `.Result` or `.Wait()` on tasks (use await)"
+    },
+    {
+      "id": "CS-PLAT-FORBID-005",
+      "title": "No `ConfigureAwait(true)` in libraries",
+      "severity": "critical",
+      "check": "FORBIDDEN: No `ConfigureAwait(true)` in libraries"
+    },
+    {
+      "id": "CS-PLAT-FORBID-006",
+      "title": "No Newtonsoft.Json in new projects (use System.Text.Json)",
+      "severity": "critical",
+      "check": "FORBIDDEN: No Newtonsoft.Json in new projects (use System.Text.Json)"
+    },
+    {
+      "id": "CS-PLAT-FORBID-007",
+      "title": "No unvalidated IOptions<T> usage",
+      "severity": "critical",
+      "check": "FORBIDDEN: No unvalidated IOptions<T> usage"
+    },
+    {
+      "id": "CS-PLAT-FORBID-008",
+      "title": "No Queue<T> for async scenarios (use Channels)",
+      "severity": "critical",
+      "check": "FORBIDDEN: No Queue<T> for async scenarios (use Channels)"
+    },
+    {
+      "id": "CS-PLAT-FORBID-009",
+      "title": "No Dictionary for static lookups (use FrozenDictionary)",
+      "severity": "critical",
+      "check": "FORBIDDEN: No Dictionary for static lookups (use FrozenDictionary)"
+    },
+    {
+      "id": "CS-PLAT-FORBID-010",
+      "title": "No TLS versions below 1.2",
+      "severity": "critical",
+      "check": "FORBIDDEN: No TLS versions below 1.2"
+    }
+  ]
+}

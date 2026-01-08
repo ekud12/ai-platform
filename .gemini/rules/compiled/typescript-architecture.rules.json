@@ -1,0 +1,206 @@
+{
+  "id": "typescript-architecture",
+  "version": "1.0.0",
+  "domain": "typescript",
+  "applies_to": [
+    "*.ts",
+    "*.tsx"
+  ],
+  "rules": [
+    {
+      "id": "TS-ARCH-001",
+      "title": "Feature-First Organization",
+      "severity": "major",
+      "check": "Organize code by feature/domain, not by technical layer. Each feature is self-contained.",
+      "bad_example": "src/\n  controllers/\n    orderController.ts\n    userController.ts\n  services/\n    orderService.ts\n    userService.ts\n  repositories/\n    orderRepository.ts\n    userRepository.ts",
+      "good_example": "src/\n  features/\n    orders/\n      order.controller.ts\n      order.service.ts\n      order.repository.ts\n      order.types.ts\n      order.schema.ts\n    users/\n      user.controller.ts\n      user.service.ts",
+      "rationale": "Feature-first keeps related code together and reduces navigation across the codebase."
+    },
+    {
+      "id": "TS-ARCH-002",
+      "title": "Aliased Imports",
+      "severity": "critical",
+      "check": "Use path aliases for imports. No relative path traversals like ../../../.",
+      "bad_example": "import { UserService } from '../../../services/user.service';\nimport { OrderDto } from '../../types/order.types';",
+      "good_example": "import { UserService } from '@/features/users/user.service';\nimport { OrderDto } from '@/features/orders/order.types';\nimport { logger } from '@/shared/logger';",
+      "rationale": "Path aliases are readable, refactor-friendly, and eliminate path confusion."
+    },
+    {
+      "id": "TS-ARCH-003",
+      "title": "Named Exports Only",
+      "severity": "critical",
+      "check": "Use named exports exclusively. Default exports are FORBIDDEN.",
+      "bad_example": "// order.service.ts\nexport default class OrderService { }\n\n// Usage\nimport OrderService from './order.service'; // Different names possible\nimport Order from './order.service'; // Inconsistent naming",
+      "good_example": "// order.service.ts\nexport class OrderService { }\n\n// Usage\nimport { OrderService } from './order.service'; // Always consistent",
+      "rationale": "Named exports ensure consistent naming, better tree-shaking, and cleaner refactoring."
+    },
+    {
+      "id": "TS-ARCH-004",
+      "title": "No Circular Imports",
+      "severity": "critical",
+      "check": "The import graph MUST be acyclic. Circular dependencies are FORBIDDEN.",
+      "bad_example": "// order.service.ts\nimport { UserService } from './user.service';\n\n// user.service.ts\nimport { OrderService } from './order.service'; // Circular!",
+      "good_example": "// Extract shared interface\n// order.types.ts\nexport interface IOrderLookup {\n  getOrdersByUser(userId: string): Promise<Order[]>;\n}\n\n// user.service.ts - depends on interface, not implementation\nimport type { IOrderLookup } from './order.types';\n\nexport class UserService {\n  constructor(private orderLookup: IOrderLookup) {}\n}",
+      "rationale": "Circular imports cause runtime issues, initialization problems, and indicate poor design."
+    },
+    {
+      "id": "TS-ARCH-005",
+      "title": "Layer Boundaries",
+      "severity": "major",
+      "check": "Lower layers MUST NOT import from higher layers. Dependency flows downward only.  **Layer Hierarchy (top to bottom)** 1. Presentation (controllers, routes) 2. Application (use cases, services) 3. Domain (entities, value objects) 4. Infrastructure (database, external APIs)",
+      "bad_example": "// domain/order.entity.ts\nimport { OrderRepository } from '../infrastructure/order.repository'; // Upward violation!",
+      "good_example": "// domain/order.entity.ts - pure domain, no infrastructure deps\nexport class Order {\n  readonly id: string;\n  readonly items: readonly OrderItem[];\n}\n\n// infrastructure/order.repository.ts - can import from domain\nimport { Order } from '../domain/order.entity';\n\nexport class OrderRepository {\n  async save(order: Order): Promise<void> { }\n}",
+      "rationale": "Strict layering prevents coupling and enables testing/replacement of components."
+    },
+    {
+      "id": "TS-ARCH-006",
+      "title": "Shared Module Location",
+      "severity": "major",
+      "check": "Shared code MUST live in @/shared or @/core. No direct imports between sibling features.",
+      "bad_example": "// features/orders/order.service.ts\nimport { validateEmail } from '../users/user.utils'; // Cross-feature import!",
+      "good_example": "// shared/validation/email.validator.ts\nexport function validateEmail(email: string): boolean { }\n\n// features/orders/order.service.ts\nimport { validateEmail } from '@/shared/validation/email.validator';",
+      "rationale": "Shared modules prevent hidden coupling between features."
+    },
+    {
+      "id": "TS-ARCH-007",
+      "title": "File Naming Convention",
+      "severity": "major",
+      "check": "Files MUST use kebab-case with purpose suffix: .service.ts, .controller.ts, .types.ts.",
+      "bad_example": "OrderService.ts\norderservice.ts\norder_service.ts\norder.ts (ambiguous purpose)",
+      "good_example": "order.service.ts\norder.controller.ts\norder.repository.ts\norder.types.ts\norder.schema.ts\norder.test.ts",
+      "rationale": "Consistent naming enables quick identification of file purpose."
+    },
+    {
+      "id": "TS-ARCH-008",
+      "title": "Type Naming Convention",
+      "severity": "major",
+      "check": "Types use PascalCase. Interfaces prefix with I only for contracts (not data shapes).",
+      "bad_example": "type orderDto = { }; // camelCase\ninterface IOrderDto { } // I prefix on data shape\ntype ORDER_STATUS = 'pending'; // SCREAMING_CASE",
+      "good_example": "type OrderDto = { };\ntype OrderStatus = 'pending' | 'shipped';\n\n// I prefix only for behavioral contracts\ninterface IOrderRepository {\n  save(order: Order): Promise<void>;\n}",
+      "rationale": "Consistent naming improves readability and distinguishes interfaces from types."
+    },
+    {
+      "id": "TS-ARCH-009",
+      "title": "Variable and Function Naming",
+      "severity": "major",
+      "check": "Variables and functions use camelCase. Constants use SCREAMING_SNAKE_CASE.",
+      "bad_example": "const MaxRetries = 3; // PascalCase constant\nfunction ProcessOrder() { } // PascalCase function\nconst ORDER_SERVICE = new OrderService(); // SCREAMING for instance",
+      "good_example": "const MAX_RETRIES = 3;\nconst DEFAULT_TIMEOUT_MS = 5000;\n\nfunction processOrder(): void { }\nconst orderService = new OrderService();",
+      "rationale": "Case conventions communicate identifier purpose at a glance."
+    },
+    {
+      "id": "TS-ARCH-010",
+      "title": "Index Files for Public API",
+      "severity": "major",
+      "check": "Use index.ts only to define public API of a module. No logic in index files.",
+      "bad_example": "// features/orders/index.ts\nexport * from './order.service';\nexport * from './order.repository';\nexport * from './order.types';\nexport * from './internal-helpers'; // Exposes internals!\n\n// Or worse - logic in index\nexport function createOrder() { } // Logic doesn't belong here",
+      "good_example": "// features/orders/index.ts - explicit public API\nexport { OrderService } from './order.service';\nexport { OrderController } from './order.controller';\nexport type { Order, OrderDto, CreateOrderRequest } from './order.types';\n// Internal helpers NOT exported",
+      "rationale": "Explicit exports define clear module boundaries and prevent internal leakage."
+    },
+    {
+      "id": "TS-ARCH-011",
+      "title": "File Size Limits",
+      "severity": "info",
+      "check": "Files SHOULD NOT exceed 500 lines. Split large files into focused modules.",
+      "bad_example": "// order.service.ts - 1500 lines with everything\nexport class OrderService {\n  // All order logic, validation, mapping, etc.\n}",
+      "good_example": "// order.service.ts - orchestration only\n// order.validator.ts - validation logic\n// order.mapper.ts - mapping logic\n// order.calculator.ts - calculation logic",
+      "rationale": "Smaller files are easier to navigate, review, and maintain."
+    },
+    {
+      "id": "TS-ARCH-012",
+      "title": "Dependency Injection",
+      "severity": "major",
+      "check": "Dependencies MUST be injected via constructor. No direct instantiation of dependencies.",
+      "bad_example": "export class OrderService {\n  private userService = new UserService(); // Direct instantiation\n  private logger = console; // Global dependency\n\n  async process(): Promise<void> {\n    const user = await this.userService.getUser();\n  }\n}",
+      "good_example": "export class OrderService {\n  constructor(\n    private readonly userService: IUserService,\n    private readonly logger: ILogger\n  ) {}\n\n  async process(): Promise<void> {\n    const user = await this.userService.getUser();\n  }\n}",
+      "rationale": "DI enables testing, loose coupling, and runtime configuration."
+    },
+    {
+      "id": "TS-ARCH-013",
+      "title": "Configuration Management",
+      "severity": "major",
+      "check": "Configuration MUST be validated at startup and accessed via typed config module.",
+      "bad_example": "// Scattered process.env access\nconst port = process.env.PORT || 3000;\nconst dbUrl = process.env.DATABASE_URL; // Might be undefined!",
+      "good_example": "// config/env.schema.ts\nimport { z } from 'zod';\n\nconst envSchema = z.object({\n  NODE_ENV: z.enum(['development', 'production', 'test']),\n  PORT: z.coerce.number().default(3000),\n  DATABASE_URL: z.string().url(),\n  REDIS_URL: z.string().url().optional()\n});\n\nexport type Env = z.infer<typeof envSchema>;\n\n// config/index.ts\nconst result = envSchema.safeParse(process.env);\nif (!result.success) {\n  console.error('Invalid configuration:', result.error.issues);\n  process.exit(1);\n}\n\nexport const config = Object.freeze(result.data);",
+      "rationale": "Validated configuration fails fast and prevents runtime config errors."
+    },
+    {
+      "id": "TS-ARCH-014",
+      "title": "No Mutable Global State",
+      "severity": "critical",
+      "check": "Mutable global state is FORBIDDEN. Use dependency injection or module-scoped constants.",
+      "bad_example": "// globals.ts\nexport let currentUser: User | null = null;\nexport let requestCount = 0;\n\n// Mutated anywhere\nimport { currentUser } from './globals';\ncurrentUser = newUser;",
+      "good_example": "// Immutable module constants\nexport const CONFIG = Object.freeze({\n  maxRetries: 3,\n  timeout: 5000\n});\n\n// Request-scoped state via AsyncLocalStorage\nconst requestContext = new AsyncLocalStorage<RequestContext>();",
+      "rationale": "Global mutable state causes race conditions, testing difficulties, and hidden coupling."
+    },
+    {
+      "id": "TS-ARCH-015",
+      "title": "Explicit Boot Order",
+      "severity": "major",
+      "check": "Application initialization MUST have explicit order. No side effects on import.",
+      "bad_example": "// database.ts\nimport { createPool } from 'pg';\nexport const pool = createPool(config); // Runs on import!\n\n// Any file importing this causes connection",
+      "good_example": "// database.ts\nimport { Pool, createPool } from 'pg';\n\nlet pool: Pool | null = null;\n\nexport async function initDatabase(config: DbConfig): Promise<Pool> {\n  if (pool) return pool;\n  pool = createPool(config);\n  await pool.connect(); // Verify connection\n  return pool;\n}\n\nexport function getPool(): Pool {\n  if (!pool) throw new Error('Database not initialized');\n  return pool;\n}\n\n// main.ts - explicit initialization order\nawait initDatabase(config.database);\nawait initCache(config.redis);\nawait startServer(config.port);",
+      "rationale": "Explicit initialization enables testing, error handling, and controlled startup."
+    },
+    {
+      "id": "TS-ARCH-FORBID-001",
+      "title": "No default exports",
+      "severity": "critical",
+      "check": "FORBIDDEN: No default exports"
+    },
+    {
+      "id": "TS-ARCH-FORBID-002",
+      "title": "No circular imports",
+      "severity": "critical",
+      "check": "FORBIDDEN: No circular imports"
+    },
+    {
+      "id": "TS-ARCH-FORBID-003",
+      "title": "No relative path traversals (`../../../`)",
+      "severity": "critical",
+      "check": "FORBIDDEN: No relative path traversals (`../../../`)"
+    },
+    {
+      "id": "TS-ARCH-FORBID-004",
+      "title": "No cross-feature direct imports",
+      "severity": "critical",
+      "check": "FORBIDDEN: No cross-feature direct imports"
+    },
+    {
+      "id": "TS-ARCH-FORBID-005",
+      "title": "No upward layer violations",
+      "severity": "critical",
+      "check": "FORBIDDEN: No upward layer violations"
+    },
+    {
+      "id": "TS-ARCH-FORBID-006",
+      "title": "No mutable global state",
+      "severity": "critical",
+      "check": "FORBIDDEN: No mutable global state"
+    },
+    {
+      "id": "TS-ARCH-FORBID-007",
+      "title": "No side effects on import",
+      "severity": "critical",
+      "check": "FORBIDDEN: No side effects on import"
+    },
+    {
+      "id": "TS-ARCH-FORBID-008",
+      "title": "No logic in index.ts files",
+      "severity": "critical",
+      "check": "FORBIDDEN: No logic in index.ts files"
+    },
+    {
+      "id": "TS-ARCH-FORBID-009",
+      "title": "No `export *` re-exports (explicit exports only)",
+      "severity": "critical",
+      "check": "FORBIDDEN: No `export *` re-exports (explicit exports only)"
+    },
+    {
+      "id": "TS-ARCH-FORBID-010",
+      "title": "No direct process.env access outside config module",
+      "severity": "critical",
+      "check": "FORBIDDEN: No direct process.env access outside config module"
+    }
+  ]
+}

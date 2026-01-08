@@ -6,7 +6,7 @@ This protocol defines how the OS "thinks" and executes complex tasks using the *
 ### Phase 1: Planning (The Architect)
 **Agent:** `planner.agent`
 **Algorithm:**
-1.  **Refresh Memory:** Execute `MapRefresh` capability to ensure `docs/ARCHITECTURE.md` is current.
+1.  **Refresh Memory:** Execute `MapRefresh` capability to ensure `.gemmem/ARCHITECTURE.md` is current.
 2.  **Decompose:** Break user request into atomic steps.
 3.  **Dependency Check:** "Can Step B run before Step A?" -> No. Order them.
 3.  **Risk Assessment:** "What if this fails?" -> Add fallback plan.
@@ -27,7 +27,7 @@ This protocol defines how the OS "thinks" and executes complex tasks using the *
 ### Phase 2: Execution (The Workers)
 **Agent:** `coder-dotnet` or `coder-typescript`
 **Algorithm:**
-1.  **Read Context:** Load files + Rules + `docs/LESSONS.md`.
+1.  **Read Context:** Load files + Rules + `.gemmem/LESSONS.md`.
 2.  **Execute:** Perform the capability (Write Code, Run Test).
 3.  **Self-Verify:** "Did I break a rule?" (Self-Correction).
 4.  **Output:** JSON completion report.
@@ -50,9 +50,9 @@ This protocol defines how the OS "thinks" and executes complex tasks using the *
 ### Phase 5: Memory Commit (The Scribe)
 **Rule:** NO task is done until memory is updated.
 **Actions:**
-1.  **Update Lessons:** Append new findings to `docs/LESSONS.md`.
-2.  **Execute Map Generation:** ALWAYS run `MapRefresh` to update `docs/ARCHITECTURE.md`.
-3.  **Verify Map:** Check `docs/ARCHITECTURE.md` to ensure new files are visible.
+1.  **Update Lessons:** Append new findings to `.gemmem/LESSONS.md`.
+2.  **Execute Map Generation:** ALWAYS run `MapRefresh` to update `.gemmem/ARCHITECTURE.md`.
+3.  **Verify Map:** Check `.gemmem/ARCHITECTURE.md` to ensure new files are visible.
 
 ### Phase 6: Escalation (The Panic Button)
 **Rule:** If stuck, **STOP**.

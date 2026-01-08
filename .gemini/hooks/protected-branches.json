@@ -1,0 +1,34 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "version": "1.0",
+  "description": "Protected branch configuration - branches where direct work is forbidden",
+
+  "protected_branches": [
+    {
+      "name": "main",
+      "reason": "Production branch - use feature branches and PRs"
+    },
+    {
+      "name": "master",
+      "reason": "Production branch - use feature branches and PRs"
+    },
+    {
+      "name": "production",
+      "reason": "Production deployment branch - use release branches"
+    },
+    {
+      "name": "release",
+      "reason": "Release branch - use hotfix branches for fixes"
+    },
+    {
+      "name": "develop",
+      "reason": "Integration branch - use feature branches"
+    }
+  ],
+
+  "settings": {
+    "block_on_protected": true,
+    "allow_read_operations": true,
+    "log_violations": true
+  }
+}

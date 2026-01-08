@@ -61,8 +61,8 @@ Clearing sensitive data from system.
 - System configuration
 - Rule definitions
 - Agent definitions
-- Architectural Maps (`docs/ARCHITECTURE.md`)
-- Learned Lessons (`docs/LESSONS.md`)
+- Architectural Maps (`.gemmem/ARCHITECTURE.md`)
+- Learned Lessons (`.gemmem/LESSONS.md`)
 
 ## What Is Wiped
 

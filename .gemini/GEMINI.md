@@ -48,7 +48,7 @@ All operations are governed by these policies:
 
 ## Project Memory (External)
 
-@../docs/LESSONS.md @../docs/ARCHITECTURE.md
+@../.gemmem/LESSONS.md @../.gemmem/ARCHITECTURE.md
 
 ## Core Constraints & Protocols
 
