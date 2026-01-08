@@ -2,6 +2,9 @@
 .env
 *.env.local
 
+# AI agent memory (local project state)
+.gemmem/
+
 # IDE
 .idea/
 .vscode/

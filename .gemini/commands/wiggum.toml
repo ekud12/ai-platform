@@ -31,19 +31,25 @@ You are the Wiggum Orchestrator. Execute the full autonomous development loop wi
 ## PHASE 3: REVIEW [reviewer-dotnet] (1800ms)
 BLOCKED: CS-LANG-014 (line 5) - Missing XML docs
 [fix]
-PASS (62 rules)
+PASS (N rules checked)
 
-## PHASE 4: MEMORY [hook] (auto)
+## PHASE 4: MEMORY [after-agent.js]
+[runs generate-map.js, updates snapshot.json]
 
 ## PHASE 5: COMPLETE [orchestrator]
-{"success":true,"files":[...],"timing_ms":{"total":4470}}
+{"success":true,"files":[...],"rules_checked":N,"timing_ms":{"total":4470}}
 ```
 
 ---
 
 ## Specification to Implement
 
-!{cat {{args}}}
+**Input:** {{args}}
+
+**Instructions:**
+- If the input above is a file path (ends in `.md`, `.spec`, `.txt`), read that file for the spec
+- Otherwise, treat the input text directly as the specification
+- If no input provided, ask the user what to build
 
 ---
 
@@ -91,40 +97,59 @@ Follow rules in @../rules/dotnet/*.rules.md or @../rules/typescript/*.rules.md
 
 ## PHASE 3: REVIEW [reviewer-dotnet|reviewer-typescript]
 
-Load @../rules/compiled/*.rules.json. Check all. Only output failures:
+**MANDATORY: Load ALL compiled rules for the domain you're reviewing.**
 
+Based on the code type you generated in PHASE 2:
+- For C#/.NET code: Load all `@../rules/compiled/dotnet-*.rules.json` files
+- For TypeScript code: Load all `@../rules/compiled/typescript-*.rules.json` files
+
+The agent MUST:
+1. Detect the code type from the files created
+2. Load ALL matching rule files from `.gemini/rules/compiled/`
+3. Count the total rules loaded
+4. Check EVERY rule against the code
+
+**Output format (failures only):**
 ```
 BLOCKED: <rule-id> (line N) - <brief issue>
 ```
 
-If all pass: `PASS (N rules)`
+If all pass: `PASS (N rules)` where N is the actual count from loaded files.
 
 On BLOCK: fix immediately, re-check, repeat until PASS or 3 failures.
 
 ---
 
-## PHASE 4: MEMORY [hook:after-agent]
+## PHASE 4: MEMORY [after-agent.js]
 
-Memory update runs automatically via AfterAgent hook.
-No manual action needed - just proceed to COMPLETE.
+**REQUIRED:** Run the after-agent hook to update project memory:
+
+```bash
+node .gemini/hooks/after-agent.js
+```
+
+This updates:
+- `.gemmem/snapshot.json` - Architecture map (modules, layers, dependencies)
+- `.gemmem/history.json` - Lessons learned (if any LESSON:/TIL: patterns in output)
+- `.gemini/logs/gemmem-*.log` - Milestone log
 
 ---
 
 ## PHASE 5: COMPLETE [orchestrator]
 
-Output with timing:
+Output ACTUAL counts from your execution:
 ```json
 {
   "success": true,
-  "iterations": N,
-  "files": ["file1.cs", "file2.cs"],
-  "rules_checked": 62,
+  "iterations": <actual_iteration_count>,
+  "files": [<actual_files_created>],
+  "rules_checked": <actual_rules_count_from_review>,
   "timing_ms": {
-    "plan": 450,
-    "execute": 2100,
-    "review": 1800,
-    "memory": 120,
-    "total": 4470
+    "plan": <actual>,
+    "execute": <actual>,
+    "review": <actual>,
+    "memory": <actual>,
+    "total": <actual>
   }
 }
 ```

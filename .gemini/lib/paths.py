@@ -107,8 +107,8 @@ def _resolve_gemmem_dir(workspace: Path) -> Path:
 @dataclass(frozen=True)
 class PathFiles:
     """Key file paths."""
-    architecture: Path
-    lessons: Path
+    snapshot: Path
+    history: Path
     rules: Path
     compiled_rules: Path
     hooks: Path
@@ -125,8 +125,8 @@ class Paths:
         self._gemmem = _resolve_gemmem_dir(self._workspace)
 
         self._files = PathFiles(
-            architecture=self._gemmem / 'ARCHITECTURE.md',
-            lessons=self._gemmem / 'LESSONS.md',
+            snapshot=self._gemmem / 'snapshot.json',
+            history=self._gemmem / 'history.json',
             rules=self._gemini / 'rules',
             compiled_rules=self._gemini / 'rules' / 'compiled',
             hooks=self._gemini / 'hooks',

@@ -15,6 +15,7 @@ const { execSync, spawn } = require('child_process');
 
 // Configuration (using smart path resolver)
 const paths = require('../lib/paths');
+const gemmem = require('../lib/gemmem');
 const WORKSPACE = paths.workspace;
 const GEMINI_DIR = paths.gemini;
 const RULES_DIR = paths.files.rules;
@@ -25,6 +26,51 @@ function output(decision, reason, additionalContext = null) {
     const result = { decision, reason };
     if (additionalContext) result.additionalContext = additionalContext;
     console.log(JSON.stringify(result));
+}
+
+// 0. Initialize .gemmem folder and files if they don't exist
+function initializeGemmem() {
+    const results = gemmem.initialize();
+
+    if (results.folder === 'created') {
+        console.error('[memory] Created .gemmem folder');
+    }
+    if (results.snapshot.action !== 'none') {
+        console.error(`[memory] snapshot.json: ${results.snapshot.action}`);
+    }
+    if (results.history.action !== 'none') {
+        console.error(`[memory] history.json: ${results.history.action}`);
+    }
+}
+
+// 0.5. Sync .geminiignore from .gemini folder to workspace root
+function syncGeminiIgnore() {
+    const sourceFile = path.join(GEMINI_DIR, '.geminiignore');
+    const targetFile = path.join(WORKSPACE, '.geminiignore');
+
+    // Only sync if source exists in .gemini folder
+    if (!fs.existsSync(sourceFile)) {
+        return;
+    }
+
+    try {
+        // Check if target needs updating
+        if (fs.existsSync(targetFile)) {
+            const sourceStat = fs.statSync(sourceFile);
+            const targetStat = fs.statSync(targetFile);
+
+            // Skip if target is newer (manual edits)
+            if (targetStat.mtimeMs >= sourceStat.mtimeMs) {
+                return;
+            }
+        }
+
+        // Copy the file
+        fs.copyFileSync(sourceFile, targetFile);
+        console.error('[sync] Updated .geminiignore in workspace root');
+    } catch (err) {
+        console.error('[sync] Warning: could not sync .geminiignore');
+    }
 }
 
 // 1. PANIC CHECK - same as before-tool but we check here too
@@ -149,6 +195,12 @@ function checkOsSync() {
 // Main execution
 async function main() {
     const startTime = Date.now();
+
+    // Initialize .gemmem folder if it doesn't exist (for new projects)
+    initializeGemmem();
+
+    // Sync .geminiignore from .gemini to workspace root (for submodule support)
+    syncGeminiIgnore();
 
     // Run all checks
     checkPanic();

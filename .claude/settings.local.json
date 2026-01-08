@@ -32,7 +32,10 @@
       "Bash(test:*)",
       "Bash(grep:*)",
       "Bash(rm:*)",
-      "Bash(ls:*)"
+      "Bash(ls:*)",
+      "Bash(node:*)",
+      "Bash(export GEMINI_API_KEY=\"AIzaSyB9qpBWXu8sZ4C1UpeeS_ZduBS1lX8saPo\")",
+      "Bash(timeout 120 gemini:*)"
     ]
   }
 }

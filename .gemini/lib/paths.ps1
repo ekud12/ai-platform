@@ -150,8 +150,8 @@ $script:Paths = @{
     Gemmem = $GemmemDir
 
     Files = @{
-        Architecture = Join-Path $GemmemDir "ARCHITECTURE.md"
-        Lessons = Join-Path $GemmemDir "LESSONS.md"
+        Snapshot = Join-Path $GemmemDir "snapshot.json"
+        History = Join-Path $GemmemDir "history.json"
         Rules = Join-Path $GeminiDir "rules"
         CompiledRules = Join-Path $GeminiDir "rules/compiled"
         Hooks = Join-Path $GeminiDir "hooks"

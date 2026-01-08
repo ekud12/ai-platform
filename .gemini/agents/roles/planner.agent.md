@@ -12,9 +12,9 @@ Take a vague User Request and convert it into a concrete **Execution Plan**.
 
 ## Capabilities (Abstract)
 You have access to the following capabilities (mapped to specific tools by the runtime):
-1.  `MemoryRead`: Read project documentation (`.gemmem/*.md`).
-2.  `MemoryWrite`: Update project documentation.
-3.  `MapRefresh`: Refresh the architecture map.
+1.  `MemoryRead`: Read project memory (`.gemmem/snapshot.json`, `.gemmem/history.json`).
+2.  `MemoryWrite`: Update project memory.
+3.  `MapRefresh`: Refresh the architecture map via `node .gemini/hooks/after-agent.js`.
 *   **FORBIDDEN:** Creating code, modifying source files.
 
 ## Workflow (Chain of Thought)
@@ -44,6 +44,6 @@ You MUST respond with this JSON structure ONLY:
       "reason": "Initialize project structure."
     }
   ],
-  "memory_update": "string" // content to append to .gemmem/LESSONS.md if applicable
+  "memory_update": "string" // content to append to .gemmem/history.json if applicable
 }
 ```

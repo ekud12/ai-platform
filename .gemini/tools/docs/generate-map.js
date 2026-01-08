@@ -3,71 +3,86 @@ const { createReadStream } = require('fs');
 const path = require('path');
 const readline = require('readline');
 
-// --- Configuration (using smart path resolver) ---
+// --- Configuration (using smart path resolver and memory manager) ---
 const paths = require('../../lib/paths');
+const gemmem = require('../../lib/gemmem');
 const ROOT_DIR = paths.workspace;
-const MAP_FILE = paths.files.architecture;
+
 // Regex for files/dirs to completely ignore
-const EXCLUDE_REGEX = /[\\/](bin|obj|node_modules|dist|build|coverage|\.git|\.vs|\.vscode|test-results|assets|public|wwwroot|mocks|__tests__)[\\/]/;
-
-const HEADER = `# Architecture Map (Structural Memory)
-*Auto-Generated: ${new Date().toISOString()}*
-
-## Purpose
-High-level dependency graph of the user code.
-
-## Modules
-`;
+const EXCLUDE_REGEX = /[\\/](bin|obj|node_modules|dist|build|coverage|\.git|\.vs|\.vscode|test-results|assets|public|wwwroot|mocks|__tests__|\.gemmem|\.gemini)[\\/]/;
 
 // --- Parsers (Parallel Ready) ---
 
 async function parseCsFile(filePath) {
-    // Read only the beginning of the file to find the namespace
     const stream = createReadStream(filePath, { encoding: 'utf8', highWaterMark: 2048 });
     const rl = readline.createInterface({ input: stream, crlfDelay: Infinity });
 
     try {
         let lines = 0;
+        let namespace = null;
+        let className = null;
+
         for await (const line of rl) {
-            const match = line.match(/namespace\s+([\w\.]+)/);
-            if (match) {
-                rl.close();
-                stream.destroy();
-                return { name: path.basename(filePath), meta: `(${match[1]})` };
-            }
-            if (++lines > 50) break;
+            const nsMatch = line.match(/namespace\s+([\w\.]+)/);
+            if (nsMatch) namespace = nsMatch[1];
+
+            const classMatch = line.match(/(?:public|internal|private)?\s*(?:static|abstract|sealed)?\s*class\s+(\w+)/);
+            if (classMatch && !className) className = classMatch[1];
+
+            if (namespace && className) break;
+            if (++lines > 100) break;
         }
         rl.close();
         stream.destroy();
-    } catch {} // Ignore errors
-    
-    return { name: path.basename(filePath), meta: null };
+
+        return {
+            name: path.basename(filePath),
+            namespace,
+            className,
+            type: 'cs'
+        };
+    } catch {
+        return { name: path.basename(filePath), type: 'cs' };
+    }
 }
 
 async function parseTsFile(filePath) {
     try {
-        // Read full file is usually faster than streaming for "search all" regex in Node
         const content = await fs.readFile(filePath, 'utf8');
         const exports = [];
-        const regex = /export\s+(?:const|function|class|type|interface|enum)\s+(\w+)/g;
+        const imports = [];
+
+        // Find exports
+        const exportRegex = /export\s+(?:const|function|class|type|interface|enum)\s+(\w+)/g;
         let match;
-        
-        while ((match = regex.exec(content)) !== null) {
-            // Simple dedup
+        while ((match = exportRegex.exec(content)) !== null) {
             if (!exports.includes(match[1])) exports.push(match[1]);
         }
-        
-        const meta = exports.length > 0 ? `(Exports: ${exports.join(', ')})` : null;
-        return { name: path.basename(filePath), meta };
+
+        // Find imports (for dependency tracking)
+        const importRegex = /import\s+.*?from\s+['"]([^'"]+)['"]/g;
+        while ((match = importRegex.exec(content)) !== null) {
+            const imp = match[1];
+            // Only track local imports, not node_modules
+            if (imp.startsWith('.') || imp.startsWith('@/')) {
+                imports.push(imp);
+            }
+        }
+
+        return {
+            name: path.basename(filePath),
+            exports,
+            imports,
+            type: 'ts'
+        };
     } catch {
-        return { name: path.basename(filePath), meta: null };
+        return { name: path.basename(filePath), type: 'ts' };
     }
 }
 
 // --- Parallel Walker ---
 
 async function scanFileSystem(dir) {
-    // Flattened results
     const results = {
         csProjects: [],
         nodeProjects: [],
@@ -75,26 +90,22 @@ async function scanFileSystem(dir) {
         tsFiles: []
     };
 
-    // Recursive Walker that runs in parallel
     async function walk(currentDir) {
         let entries;
         try {
             entries = await fs.readdir(currentDir, { withFileTypes: true });
-        } catch { return; } // Ignore errors
+        } catch { return; }
 
         const pendingPromises = [];
 
         for (const entry of entries) {
             const fullPath = path.join(currentDir, entry.name);
 
-            // 1. Check Exclusion (Fast Regex)
             if (EXCLUDE_REGEX.test(fullPath)) continue;
 
             if (entry.isDirectory()) {
-                // Parallel recurse
                 pendingPromises.push(walk(fullPath));
             } else {
-                // File Classification
                 const ext = path.extname(entry.name);
                 if (ext === '.csproj') {
                     results.csProjects.push({ path: fullPath, dir: currentDir });
@@ -115,137 +126,213 @@ async function scanFileSystem(dir) {
     return results;
 }
 
+// --- Classify Layer ---
+
+function classifyLayer(filePath, namespace) {
+    // Normalize to lowercase for matching
+    const lower = filePath.toLowerCase().replace(/\\/g, '/');
+    const ns = (namespace || '').toLowerCase();
+
+    // Presentation layer
+    if (lower.includes('/api/') || lower.includes('/controllers/') ||
+        lower.includes('/routes/') || lower.includes('/pages/') ||
+        lower.includes('/endpoints/') || lower.includes('/web/') ||
+        ns.includes('.api') || ns.includes('.controllers') || ns.includes('.web')) {
+        return 'presentation';
+    }
+
+    // Application layer
+    if (lower.includes('/services/') || lower.includes('/application/') ||
+        lower.includes('/usecases/') || lower.includes('/handlers/') ||
+        lower.includes('/commands/') || lower.includes('/queries/') ||
+        ns.includes('.services') || ns.includes('.application') || ns.includes('.handlers')) {
+        return 'application';
+    }
+
+    // Domain layer
+    if (lower.includes('/domain/') || lower.includes('/entities/') ||
+        lower.includes('/models/') || lower.includes('/core/') ||
+        lower.includes('/aggregates/') || lower.includes('/valueobjects/') ||
+        ns.includes('.domain') || ns.includes('.entities') || ns.includes('.core')) {
+        return 'domain';
+    }
+
+    // Infrastructure layer
+    if (lower.includes('/infrastructure/') || lower.includes('/data/') ||
+        lower.includes('/repositories/') || lower.includes('/external/') ||
+        lower.includes('/persistence/') || lower.includes('/messaging/') ||
+        lower.includes('/eventbus/') || lower.includes('/integrations/') ||
+        ns.includes('.infrastructure') || ns.includes('.data') || ns.includes('.persistence')) {
+        return 'infrastructure';
+    }
+
+    return 'unknown';
+}
+
 // --- Main ---
 
 async function main() {
-    console.time('Total Time');
+    const startTime = Date.now();
 
-    // 1. Scan EVERYTHING in one pass
+    // 1. Scan everything in one pass
     const scan = await scanFileSystem(ROOT_DIR);
 
-    // 2. Process Files in Parallel (Blast IO)
-    // We fire off parsing for all files immediately.
+    // 2. Process files in parallel
     const csTasks = scan.csFiles.map(async file => {
-        const result = await parseCsFile(file.path);
-        file.parsed = result;
-    });
-    
-    const tsTasks = scan.tsFiles.map(async file => {
-        const result = await parseTsFile(file.path);
-        file.parsed = result;
+        file.parsed = await parseCsFile(file.path);
     });
 
-    // Wait for all IO to finish
+    const tsTasks = scan.tsFiles.map(async file => {
+        file.parsed = await parseTsFile(file.path);
+    });
+
     await Promise.all([...csTasks, ...tsTasks]);
 
-    // 3. Organization (Memory)
-    // Map files to their nearest project.
-    // Logic: Find the project dir that is a prefix of the file dir, with the longest length (deepest).
-    
-    // Sort projects by directory length desc (deepest first) to ensure correct assignment
+    // 3. Build snapshot structure
+    const modules = {};
+    const layers = {
+        presentation: [],
+        application: [],
+        domain: [],
+        infrastructure: [],
+        unknown: []
+    };
+    const dependencies = [];
+
+    // Sort projects by depth
     scan.csProjects.sort((a, b) => b.dir.length - a.dir.length);
     scan.nodeProjects.sort((a, b) => b.dir.length - a.dir.length);
 
-    const projectMap = new Map(); // ProjectPath -> [Files]
-
-    // Initialize map
-    for (const p of scan.csProjects) projectMap.set(p.path, []);
-    for (const p of scan.nodeProjects) projectMap.set(p.path, []);
-
-    // Track orphan files (no parent project)
-    const orphanCs = [];
-    const orphanTs = [];
-
-    // Assign CS Files
-    for (const file of scan.csFiles) {
-        const parent = scan.csProjects.find(p => file.path.startsWith(p.dir));
-        if (parent) {
-            projectMap.get(parent.path).push(file);
-        } else {
-            orphanCs.push(file);
-        }
-    }
-
-    // Assign TS Files
-    for (const file of scan.tsFiles) {
-        const parent = scan.nodeProjects.find(p => file.path.startsWith(p.dir));
-        if (parent) {
-            projectMap.get(parent.path).push(file);
-        } else {
-            orphanTs.push(file);
-        }
-    }
-
-    // 4. Output Generation
-    let output = HEADER;
-
-    // Output C#
+    // Process C# projects
     for (const proj of scan.csProjects) {
-        output += `\n### Project (C#): ${path.basename(proj.path)}\n`;
-        const files = projectMap.get(proj.path);
-        if (files) {
-            for (const f of files) {
-                output += `*   **${f.parsed.name}** ${f.parsed.meta || ''}\n`;
-            }
+        const projName = path.basename(proj.path, '.csproj');
+        const relativePath = path.relative(ROOT_DIR, proj.dir).replace(/\\/g, '/');
+
+        const projFiles = scan.csFiles.filter(f => f.path.startsWith(proj.dir));
+
+        // Simplified file format: "FileName.cs (Namespace) -> ClassName/InterfaceName"
+        const fileInfos = projFiles.map(f => {
+            const exports = f.parsed.className || f.parsed.name.replace('.cs', '');
+            return `${f.parsed.name} (${f.parsed.namespace || 'no-ns'}) -> ${exports}`;
+        });
+
+        modules[relativePath || projName] = {
+            type: 'dotnet',
+            namespace: projFiles[0]?.parsed?.namespace || projName,
+            files: fileInfos
+        };
+
+        // Classify layer
+        const layer = classifyLayer(proj.dir, projFiles[0]?.parsed?.namespace);
+        if (layers[layer]) {
+            layers[layer].push(relativePath || projName);
         }
     }
 
-    // Output Node
+    // Process Node projects
     for (const proj of scan.nodeProjects) {
-        let name = path.basename(path.dirname(proj.path));
-        // Try to read package.json name (fast read)
+        let projName = path.basename(path.dirname(proj.path));
         try {
             const pkg = JSON.parse(await fs.readFile(proj.path, 'utf8'));
-            if (pkg.name) name = pkg.name;
-        } catch {} // Ignore errors
+            if (pkg.name) projName = pkg.name;
+        } catch {}
 
-        output += `\n### Project (TS/JS): ${name}\n`;
-        const files = projectMap.get(proj.path);
-        if (files) {
-            for (const f of files) {
-                output += `*   **${f.parsed.name}** ${f.parsed.meta || ''}\n`;
+        const relativePath = path.relative(ROOT_DIR, proj.dir).replace(/\\/g, '/');
+
+        const projFiles = scan.tsFiles.filter(f => f.path.startsWith(proj.dir));
+        // Simplified file format: "FileName.ts -> export1, export2, ..."
+        const fileInfos = projFiles.map(f => {
+            const exports = (f.parsed.exports || []).join(', ') || 'default';
+            return `${f.parsed.name} -> ${exports}`;
+        });
+
+        modules[relativePath || projName] = {
+            type: 'typescript',
+            name: projName,
+            files: fileInfos
+        };
+
+        // Classify layer
+        const layer = classifyLayer(proj.dir, null);
+        if (layers[layer]) {
+            layers[layer].push(relativePath || projName);
+        }
+
+        // Track dependencies from imports
+        for (const file of projFiles) {
+            if (file.parsed.imports) {
+                for (const imp of file.parsed.imports) {
+                    dependencies.push({
+                        from: `${relativePath}/${file.parsed.name}`,
+                        to: imp,
+                        type: 'import'
+                    });
+                }
             }
         }
     }
 
-    // Output orphan C# files (no .csproj)
+    // Handle orphan files
+    const assignedCsFiles = new Set(scan.csProjects.flatMap(p =>
+        scan.csFiles.filter(f => f.path.startsWith(p.dir)).map(f => f.path)
+    ));
+    const orphanCs = scan.csFiles.filter(f => !assignedCsFiles.has(f.path));
+
     if (orphanCs.length > 0) {
-        output += `\n### Standalone C# Files (no .csproj)\n`;
-        // Group by directory
         const byDir = {};
         for (const f of orphanCs) {
-            const dir = path.relative(ROOT_DIR, f.dir) || '.';
+            const dir = path.relative(ROOT_DIR, f.dir).replace(/\\/g, '/') || 'root';
             if (!byDir[dir]) byDir[dir] = [];
-            byDir[dir].push(f);
+            // Simplified format: "FileName.cs (Namespace) -> ClassName"
+            const exports = f.parsed.className || f.parsed.name.replace('.cs', '');
+            byDir[dir].push(`${f.parsed.name} (${f.parsed.namespace || 'no-ns'}) -> ${exports}`);
         }
         for (const [dir, files] of Object.entries(byDir)) {
-            output += `\n**${dir}/**\n`;
-            for (const f of files) {
-                output += `*   ${f.parsed.name} ${f.parsed.meta || ''}\n`;
+            const moduleKey = `standalone-cs/${dir}`;
+            modules[moduleKey] = {
+                type: 'dotnet-standalone',
+                files
+            };
+
+            // Classify layer for standalone modules too
+            const layer = classifyLayer(dir, null);
+            if (layers[layer]) {
+                layers[layer].push(moduleKey);
             }
         }
     }
 
-    // Output orphan TS files (no package.json)
+    const assignedTsFiles = new Set(scan.nodeProjects.flatMap(p =>
+        scan.tsFiles.filter(f => f.path.startsWith(p.dir)).map(f => f.path)
+    ));
+    const orphanTs = scan.tsFiles.filter(f => !assignedTsFiles.has(f.path));
+
     if (orphanTs.length > 0) {
-        output += `\n### Standalone TS/JS Files (no package.json)\n`;
         const byDir = {};
         for (const f of orphanTs) {
-            const dir = path.relative(ROOT_DIR, f.dir) || '.';
+            const dir = path.relative(ROOT_DIR, f.dir).replace(/\\/g, '/') || 'root';
             if (!byDir[dir]) byDir[dir] = [];
-            byDir[dir].push(f);
+            // Simplified format: "FileName.ts -> export1, export2, ..."
+            const exports = (f.parsed.exports || []).join(', ') || 'default';
+            byDir[dir].push(`${f.parsed.name} -> ${exports}`);
         }
         for (const [dir, files] of Object.entries(byDir)) {
-            output += `\n**${dir}/**\n`;
-            for (const f of files) {
-                output += `*   ${f.parsed.name} ${f.parsed.meta || ''}\n`;
-            }
+            modules[`standalone-ts/${dir}`] = {
+                type: 'typescript-standalone',
+                files
+            };
         }
     }
 
-    await fs.writeFile(MAP_FILE, output);
-    console.log(`Map updated at ${MAP_FILE}`);
-    console.timeEnd('Total Time');
+    // 4. Update snapshot via gemmem
+    const result = gemmem.updateSnapshot({
+        modules,
+        layers,
+        dependencies
+    });
+
+    const elapsed = Date.now() - startTime;
+    console.log(`Snapshot updated (${elapsed}ms) - ${result.modulesCount} modules`);
 }
 
 main().catch(err => console.error(err));

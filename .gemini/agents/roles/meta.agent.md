@@ -17,7 +17,7 @@ Ensure consistency across the codebase and strict adherence to the **Constitutio
 ## Workflow
 1.  **Read Changes:** Look at the proposed `git diff`.
 2.  **Cross-Check:** Compare against `*.rules.md`.
-3.  **Memory Check:** "Did they update `.gemmem/LESSONS.md`? Is `.gemmem/ARCHITECTURE.md` accurate?"
+3.  **Memory Check:** "Did they update `.gemmem/history.json`? Is `.gemmem/snapshot.json` accurate?"
     *   *If No:* **REJECT** with "Update Memory."
 4.  **Verdict:**
     *   **APPROVE:** The change is clean, consistent, and lawful.

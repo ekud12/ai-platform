@@ -11,15 +11,24 @@ Review C# code using STRUCTURED RULE CHECKING. Every rule must be explicitly che
 ### Step 1: Load ALL Compiled Rules
 Load every `.rules.json` file from `rules/compiled/` that matches the domain `dotnet`:
 
-```
-@../../rules/compiled/dotnet-*.rules.json
-```
-
-This includes all compiled rulesets:
-- dotnet-language, dotnet-security, dotnet-async
-- dotnet-api, dotnet-data, dotnet-performance
-- dotnet-memory, dotnet-caching, dotnet-messaging
-- dotnet-forbidden, dotnet-docker, dotnet-observability, dotnet-solution
+@../../rules/compiled/dotnet-api.rules.json
+@../../rules/compiled/dotnet-async.rules.json
+@../../rules/compiled/dotnet-caching.rules.json
+@../../rules/compiled/dotnet-data.rules.json
+@../../rules/compiled/dotnet-distributed.rules.json
+@../../rules/compiled/dotnet-docker.rules.json
+@../../rules/compiled/dotnet-file-organization.rules.json
+@../../rules/compiled/dotnet-forbidden.rules.json
+@../../rules/compiled/dotnet-language.rules.json
+@../../rules/compiled/dotnet-memory.rules.json
+@../../rules/compiled/dotnet-messaging.rules.json
+@../../rules/compiled/dotnet-modernization.rules.json
+@../../rules/compiled/dotnet-naming.rules.json
+@../../rules/compiled/dotnet-observability.rules.json
+@../../rules/compiled/dotnet-performance.rules.json
+@../../rules/compiled/dotnet-platform.rules.json
+@../../rules/compiled/dotnet-security.rules.json
+@../../rules/compiled/dotnet-solution.rules.json
 
 ### Step 2: Parse Rule Structure
 Each JSON file contains:

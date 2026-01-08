@@ -48,7 +48,7 @@ All operations are governed by these policies:
 
 ## Project Memory (External)
 
-@../.gemmem/LESSONS.md @../.gemmem/ARCHITECTURE.md
+@../.gemmem/snapshot.json @../.gemmem/history.json
 
 ## Core Constraints & Protocols
 

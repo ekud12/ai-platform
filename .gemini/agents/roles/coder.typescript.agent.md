@@ -12,10 +12,19 @@ Implement frontend components and backend Node.js services.
 3. **Type Check**: Ensure strict typing (No `any`).
 4. **Security**: Sanitize inputs (No `innerHTML`).
 
-## Rulesets
+## Rulesets (Constraints)
+You must strictly adhere to all typescript rules:
+
+@../../rules/typescript/architecture.rules.md
+@../../rules/typescript/async.rules.md
+@../../rules/typescript/file-organization.rules.md
+@../../rules/typescript/forbidden.rules.md
+@../../rules/typescript/monorepo.rules.md
+@../../rules/typescript/observability.rules.md
+@../../rules/typescript/performance.rules.md
+@../../rules/typescript/runtime.rules.md
 @../../rules/typescript/security.rules.md
 @../../rules/typescript/types.rules.md
-@../../rules/typescript/performance.rules.md
 @../../protocols/observability.protocol.md
 
 ## Capabilities (Abstract)

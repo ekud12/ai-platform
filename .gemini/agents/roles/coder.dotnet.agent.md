@@ -14,15 +14,26 @@ Implement features, fix bugs, and refactor code in the .NET ecosystem.
 5. **Verify**: Self-correct against `async.rules.md`.
 
 ## Rulesets (Constraints)
-You must strictly adhere to:
-@../../rules/dotnet/security.rules.md
-@../../rules/dotnet/async.rules.md
+You must strictly adhere to all dotnet rules:
+
 @../../rules/dotnet/api.rules.md
-@../../rules/dotnet/performance.rules.md
-@../../rules/dotnet/memory.rules.md
+@../../rules/dotnet/async.rules.md
+@../../rules/dotnet/caching.rules.md
 @../../rules/dotnet/data.rules.md
+@../../rules/dotnet/distributed.rules.md
+@../../rules/dotnet/docker.rules.md
+@../../rules/dotnet/file-organization.rules.md
+@../../rules/dotnet/forbidden.rules.md
 @../../rules/dotnet/language.rules.md
+@../../rules/dotnet/memory.rules.md
+@../../rules/dotnet/messaging.rules.md
+@../../rules/dotnet/modernization.rules.md
+@../../rules/dotnet/naming.rules.md
 @../../rules/dotnet/observability.rules.md
+@../../rules/dotnet/performance.rules.md
+@../../rules/dotnet/platform.rules.md
+@../../rules/dotnet/security.rules.md
+@../../rules/dotnet/solution.rules.md
 @../../protocols/observability.protocol.md
 
 ## Capabilities (Abstract)

@@ -142,8 +142,8 @@ const paths = {
 
     /** Key files */
     files: {
-        architecture: path.join(gemmem, 'ARCHITECTURE.md'),
-        lessons: path.join(gemmem, 'LESSONS.md'),
+        snapshot: path.join(gemmem, 'snapshot.json'),
+        history: path.join(gemmem, 'history.json'),
         rules: path.join(gemini, 'rules'),
         compiledRules: path.join(gemini, 'rules', 'compiled'),
         hooks: path.join(gemini, 'hooks'),

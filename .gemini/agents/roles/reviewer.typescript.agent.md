@@ -11,15 +11,19 @@ Review TypeScript/JavaScript code using STRUCTURED RULE CHECKING. Every rule mus
 ### Step 1: Load ALL Compiled Rules
 Load every `.rules.json` file from `rules/compiled/` that matches TypeScript and JavaScript:
 
-```
-@../../rules/compiled/typescript-*.rules.json
-@../../rules/compiled/javascript-*.rules.json
-```
-
-This includes all compiled rulesets:
-- typescript-types, typescript-security, typescript-async
-- typescript-performance, typescript-forbidden, typescript-monorepo
-- javascript-safety, javascript-modernization, javascript-forbidden
+@../../rules/compiled/typescript-architecture.rules.json
+@../../rules/compiled/typescript-async.rules.json
+@../../rules/compiled/typescript-file-organization.rules.json
+@../../rules/compiled/typescript-forbidden.rules.json
+@../../rules/compiled/typescript-monorepo.rules.json
+@../../rules/compiled/typescript-observability.rules.json
+@../../rules/compiled/typescript-performance.rules.json
+@../../rules/compiled/typescript-runtime.rules.json
+@../../rules/compiled/typescript-security.rules.json
+@../../rules/compiled/typescript-types.rules.json
+@../../rules/compiled/javascript-forbidden.rules.json
+@../../rules/compiled/javascript-modernization.rules.json
+@../../rules/compiled/javascript-safety.rules.json
 
 ### Step 2: Parse Rule Structure
 Each JSON file contains:
